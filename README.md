@@ -34,42 +34,36 @@ helm init --service-account tiller --history-max 200
 
 kubectl apply -f https://raw.githubusercontent.com/jetstack/cert-manager/master/deploy/manifests/00-crds.yaml --validate=false
 helm repo add jetstack https://charts.jetstack.io && helm repo update
-# kubectl label namespace kube-system certmanager.k8s.io/disable-validation=
+helm install --name traefik stable/traefik --values helm/traefik.yaml --namespace kube-system
 helm install jetstack/cert-manager --name cert-manager --values helm/cert-manager.yaml --namespace kube-system
-
 kubectl apply -f k8s/cert-manager-issuers.yaml
 
 # Create a zone first (not idempotent)
 gcloud dns managed-zones create maelvls --description "My DNS zone" --dns-name=maelvls.dev
-# Create a service account for managing the DNS records for external-dns
+
+# Create a service account for 'external-dns' (will manage dns records)
 gcloud iam service-accounts create external-dns --display-name "For external-dns"
 gcloud projects add-iam-policy-binding august-period-234610 --role='roles/dns.admin' --member='serviceAccount:dns-exporter@august-period-234610.iam.gserviceaccount.com'
 gcloud iam service-accounts keys create credentials.json --iam-account dns-exporter@august-period-234610.iam.gserviceaccount.com
 kubectl create secret generic external-dns --from-file=credentials.json=credentials.json
 helm install --name external-dns stable/external-dns --values helm/external-dns.yaml
 
-helm install --name traefik stable/traefik --values helm/traefik.yaml --namespace kube-system
-
-helm install --name kubernetes-dashboard stable/kubernetes-dashboard --values helm/kubernetes-dashboard.yaml --namespace kube-system
-
-helm install --name operator stable/prometheus-operator --namespace kube-system --values helm/operator.yaml
-kubectl apply -f k8s/grafana-dashboards.yaml
-
-git clone https://github.com/arthur-c/ansible-awx-helm-chart
-helm dependency update ./ansible-awx-helm-chart/awx
-helm install --name awx ./ansible-awx-helm-chart/awx --namespace awx --values helm/awx.yaml
-```
-
-```sh
-# helm install --name consul stable/consul --namespace kube-system --values helm/consul.yml
-
+# Create a service account for 'vault' storage
 gcloud iam service-accounts create vault-store --display-name "For vault storage"
 gcloud projects add-iam-policy-binding august-period-234610 --role='roles/storage.objectAdmin' --member='serviceAccount:vault-store@august-period-234610.iam.gserviceaccount.com'
 gcloud iam service-accounts keys create credentials.json --iam-account vault-store@august-period-234610.iam.gserviceaccount.com
-
 kubectl -n vault create secret generic vault-storage-cred-file --from-file=credentials.json=credentials.json
+
 helm repo add incubator http://storage.googleapis.com/kubernetes-charts-incubator
 helm install --name vault incubator/vault --namespace vault --values helm/vault.yaml
+```
+
+Extras:
+
+```sh
+helm install --name kubernetes-dashboard stable/kubernetes-dashboard --values helm/kubernetes-dashboard.yaml --namespace kube-system
+helm install --name operator stable/prometheus-operator --namespace kube-system --values helm/operator.yaml
+kubectl apply -f k8s/grafana-dashboards.yaml
 ```
 
 In order to destroy:
@@ -177,7 +171,7 @@ See: <https://www.jeffgeerling.com/blog/2018/fixing-503-service-unavailable-and-
 }
 ```
 
-## ACME not refreshing the certificats LetsEncrypt
+## ACME not refreshing LetsEncrypt certs
 
 In order to refresh the certificate issued by LetsEncrypt, just remove the
 corresponding secret:
