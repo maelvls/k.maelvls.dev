@@ -1,9 +1,7 @@
-# AWX (Ansible Tower) on GKE using Terraform
+# Vault + external-dns + cert-manager on GKE using Terraform
 
-![kubernetes-awx](https://user-images.githubusercontent.com/2195781/56848717-75d56280-68ec-11e9-8b6e-36fee9fbb712.png)
-
-Infra-as-code (terraform + helm) for creating a Kubernetes cluster with AWX
-(Ansible Tower) and featuring
+Infra-as-code (terraform + helm) for creating a Kubernetes cluster with
+Vault and featuring
 
 - external DNS configured dynamically by the cluster when the LoadBalancer
   (traefik) gets its external IP. Regarding the fqdn `*.kube.maelvls.dev`:
@@ -14,7 +12,7 @@ Infra-as-code (terraform + helm) for creating a Kubernetes cluster with AWX
   alertmanager, kube-state-metrics) with grafana on
   <https://grafana.kube.maelvls.dev>
 - Kubernetes dashboard + heapster
-- and of course AWX on <https://awx.kube.maelvls.dev> (admin/password)
+- and of course Vault on <https://vault.kube.maelvls.dev>
 
 The whole thing should fit on a single `n1-standard-4` node (4 vCPUs, 15GB
 RAM), although it should be better with a least two nodes (memcached will
