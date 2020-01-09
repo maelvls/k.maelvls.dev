@@ -1,0 +1,14 @@
+web:
+  ingress:
+    enabled: true
+    annotations:
+      kubernetes.io/ingress.class: traefik
+      cert-manager.io/cluster-issuer: letsencrypt-prod
+    hosts: [drone.kube.maelvls.dev]
+    tls:
+      - hosts: [drone.kube.maelvls.dev]
+        secretName: drone-example-tls
+secrets:
+  githubClientId: 4e8d7f3224fdc115d094
+  # github-client-secret is stored in the [release-name]-concourse
+  # secret.

@@ -1,0 +1,16 @@
+service:
+  type: ClusterIP
+ingress:
+  enabled: true
+  annotations:
+    kubernetes.io/ingress.class: traefik
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+  hosts: [drone.kube.maelvls.dev]
+  tls:
+    - hosts: [drone.kube.maelvls.dev]
+      secretName: drone-example-tls
+sourceControl:
+  secret: drone-server-secrets
+  provider: github
+  github:
+    clientID: 4e8d7f3224fdc115d094

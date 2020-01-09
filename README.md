@@ -1,7 +1,7 @@
-# Vault + external-dns + cert-manager on GKE using Terraform
+# Helm 3 + Vault + external-dns + cert-manager on GKE using Terraform
 
-Infra-as-code (terraform + helm) for creating a Kubernetes cluster with
-Vault and featuring
+Infra-as-code (terraform + helm 3) for creating a Kubernetes cluster with Vault
+and featuring.
 
 - external DNS configured dynamically by the cluster when the LoadBalancer
   (traefik) gets its external IP. Regarding the fqdn `*.kube.maelvls.dev`:
@@ -30,37 +30,65 @@ source .envrc # if you have direnv, skip this
 kubectl apply -f k8s/helm-tiller-rbac.yml
 helm init --service-account tiller --history-max 200
 
+kubectl create namespace cert-manager
 kubectl apply -f https://raw.githubusercontent.com/jetstack/cert-manager/master/deploy/manifests/00-crds.yaml --validate=false
 helm repo add jetstack https://charts.jetstack.io && helm repo update
-helm install --name traefik stable/traefik --values helm/traefik.yaml --namespace kube-system
-helm install jetstack/cert-manager --name cert-manager --values helm/cert-manager.yaml --namespace kube-system
+helm install cert-manager jetstack/cert-manager --values helm/cert-manager.yaml --namespace cert-manager
 kubectl apply -f k8s/cert-manager-issuers.yaml
 
+kubectl create namespace traefik
+helm install traefik stable/traefik --values helm/traefik.yaml --namespace traefik
+
+kubectl create namespace external-dns
 # Create a zone first (not idempotent)
 gcloud dns managed-zones create maelvls --description "My DNS zone" --dns-name=maelvls.dev
-
-# Create a service account for 'external-dns' (will manage dns records)
 gcloud iam service-accounts create external-dns --display-name "For external-dns"
 gcloud projects add-iam-policy-binding august-period-234610 --role='roles/dns.admin' --member='serviceAccount:dns-exporter@august-period-234610.iam.gserviceaccount.com'
-gcloud iam service-accounts keys create credentials.json --iam-account dns-exporter@august-period-234610.iam.gserviceaccount.com
-kubectl create secret generic external-dns --from-file=credentials.json=credentials.json
-helm install --name external-dns stable/external-dns --values helm/external-dns.yaml
+helm install external-dns stable/external-dns --values helm/external-dns.yaml --namespace external-dns
+gcloud iam service-accounts keys create /dev/stdout --iam-account dns-exporter@august-period-234610.iam.gserviceaccount.com | kubectl -n external-dns create secret generic external-dns --from-file=credentials.json=/dev/stdin
 
+
+# Drone-related (don't forget to setup .envrc.example)
+kubectl create namespace drone
+kubectl -n drone create secret generic drone-server-secrets --from-literal=clientSecret=$GITHUB_CLIENT_SECRET
+kubectl -n drone get secret drone-server-secrets -ojsonpath='{.data.clientSecret}' | base64 -d
+helm install drone stable/drone --namespace drone --values helm/drone.yaml
+
+# Vault-related (https://github.com/hashicorp/vault-helm)
+kubectl create namespace vault
+gcloud kms keyrings create vault-auto-seal-key-ring --location=global
+gcloud iam service-accounts create vault-kms --display-name "Vault needs access to KMS for auto-seal"
+gcloud projects add-iam-policy-binding august-period-234610 --role='roles/cloudkms.cryptoKeyEncrypterDecrypter' --member='serviceAccount:vault-kms@august-period-234610.iam.gserviceaccount.com'
+gcloud iam service-accounts keys create /dev/stdout --iam-account vault-kms@august-period-234610.iam.gserviceaccount.com | kubectl -n vault create secret generic vault-kms --from-file=credentials.json=/dev/stdin
+git clone https://github.com/hashicorp/vault-helm /tmp || git -C /tmp/vault-helm pull
+helm install vault /tmp/vault-helm --values helm/vault.yaml --namespace vault
+
+# Next steps are manual:
+kubectl -n vault port-forward vault-0 8200
+kubectl -n vault exec -it vault-0 sh
+vault operator init # Copy the 'Initial Root Token'
+vault login -method=token
+# You may run vault (CLI) like this:
+# $ kubectl -n vault exec -it vault-0 sh
+
+# Vault-related (incubator helm)
 # Create a service account for 'vault' storage
 gcloud iam service-accounts create vault-store --display-name "For vault storage"
 gcloud projects add-iam-policy-binding august-period-234610 --role='roles/storage.objectAdmin' --member='serviceAccount:vault-store@august-period-234610.iam.gserviceaccount.com'
 gcloud iam service-accounts keys create credentials.json --iam-account vault-store@august-period-234610.iam.gserviceaccount.com
 kubectl -n vault create secret generic vault-storage-cred-file --from-file=credentials.json=credentials.json
 
-helm repo add incubator http://storage.googleapis.com/kubernetes-charts-incubator
-helm install --name vault incubator/vault --namespace vault --values helm/vault.yaml
+# helm repo add incubator http://storage.googleapis.com/kubernetes-charts-incubator
+# helm install vault incubator/vault --namespace vault --values helm/vault.yaml
+git clone https://github.com/hashicorp/vault-helm helm/vault-helm
+helm install vault ./helm/vault-helm --values helm/vault.yaml
 ```
 
 Extras:
 
 ```sh
-helm install --name kubernetes-dashboard stable/kubernetes-dashboard --values helm/kubernetes-dashboard.yaml --namespace kube-system
-helm install --name operator stable/prometheus-operator --namespace kube-system --values helm/operator.yaml
+helm install kubernetes-dashboard stable/kubernetes-dashboard --values helm/kubernetes-dashboard.yaml --namespace kube-system
+helm install operator stable/prometheus-operator --namespace kube-system --values helm/operator.yaml
 kubectl apply -f k8s/grafana-dashboards.yaml
 ```
 

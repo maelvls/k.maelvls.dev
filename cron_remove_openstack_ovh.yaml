@@ -1,0 +1,21 @@
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: trigger-build-ovh-remove
+spec:
+  schedule: "*/1 * * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: cron-webhook
+            image: byrnedo/alpine-curl:latest
+            args:
+            - curl
+            - -X
+            - POST
+            - https://cloud.drone.io/api/repos/maelvls/rm-openstack-servers/builds
+            - -H
+            - 'Authorization: Bearer 7kJ9m8y25nRUuC1EChFAOXZjulVhBY6a'
+          restartPolicy: OnFailure

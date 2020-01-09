@@ -1,43 +1,67 @@
-service:
-  type: ClusterIP
-ingress:
-  enabled: true
-  annotations:
-    kubernetes.io/ingress.class: traefik
-    cert-manager.io/cluster-issuer: letsencrypt-prod
-    ingress.kubernetes.io/protocol: http
-  hosts: [vault.kube.maelvls.dev]
-  tls:
-    - hosts: [vault.kube.maelvls.dev]
-      secretName: vault-example-tls
-vault:
-  # A YAML representation of a final vault config.json file.
-  # See https://www.vaultproject.io/docs/configuration/ for more
-  # information.
-  config:
-    dev: "true"
-    storage:
-      gcs:
-        bucket: vault-storage
-        credentials_file: /vault/vault-storage-cred-file/credentials.json
-    listener:
-      tcp:
-        tls_disable: "true"
-        tls_cert_file: /vault/tls/tls.crt
-        tls_key_file: /vault/tls/tls.key
+# Hashicorp's helm chart: https://github.com/hashicorp/vault-helm
 
-  logLevel: "debug"
+global:
+  # TLS for end-to-end encrypted transport
+  tlsDisable: true
+
+server:
+  ingress:
+    enabled: true
+    annotations:
+      kubernetes.io/ingress.class: traefik
+      cert-manager.io/cluster-issuer: letsencrypt-prod
+    hosts:
+      - host: vault.kube.maelvls.dev
+        paths: [/]
+    tls:
+      - hosts: [vault.kube.maelvls.dev]
+        secretName: vault-tls
+
   extraVolumes:
-    - name: vault-tls
-      secret:
-        secretName: vault-example-tls
-    - name: vault-storage
-      secret:
-        secretName: vault-storage-cred-file
-  extraVolumeMounts:
-    - name: vault-tls
-      mountPath: /vault/tls
-      readOnly: true
-    - name: vault-storage
-      mountPath: /vault/vault-storage-cred-file
-      readOnly: true
+    - type: secret
+      name: vault-kms
+      path: null # default is `/vault/userconfig/<name>`
+
+  # This configures the Vault Statefulset to create a PVC for data
+  # storage when using the file backend.
+  # See https://www.vaultproject.io/docs/configuration/storage/index.html to know more
+  dataStorage:
+    enabled: true
+    # Size of the PVC created
+    size: 10Gi
+    # Name of the storage class to use.  If null it will use the
+    # configured default Storage Class.
+    storageClass: null
+    # Access Mode of the storage device being used for the PVC
+    accessMode: ReadWriteOnce
+
+  # Run Vault in "standalone" mode. This is the default mode that will deploy if
+  # no arguments are given to helm. This requires a PVC for data storage to use
+  # the "file" backend.  This mode is not highly available and should not be scaled
+  # past a single replica.
+  standalone:
+    enabled: "true"
+    # config is a raw string of default configuration when using a Stateful
+    # deployment. Default is to use a PersistentVolumeClaim mounted at /vault/data
+    # and store data there. This is only used when using a Replica count of 1, and
+    # using a stateful set. This should be HCL.
+    config: |
+      ui = true
+      listener "tcp" {
+        tls_disable = 1
+        address = "[::]:8200"
+        cluster_address = "[::]:8201"
+      }
+      storage "file" {
+        path = "/vault/data"
+      }
+      # Example configuration for using auto-unseal, using Google Cloud KMS. The
+      # GKMS keys must already exist, and the cluster must have a service account
+      # that is authorized to access GCP KMS.
+      seal "gcpckms" {
+         credentials = "/vault/userconfig/vault-kms/credentials.json"
+         project     = "august-period-234610"
+         region      = "global"
+         key_ring    = "vault-auto-seal-key-ring"
+         crypto_key  = "vault-auto-seal-crypto-key"
+      }
