@@ -4,11 +4,44 @@ web:
     annotations:
       kubernetes.io/ingress.class: traefik
       cert-manager.io/cluster-issuer: letsencrypt-prod
-    hosts: [drone.kube.maelvls.dev]
+    hosts: [concourse.kube.maelvls.dev]
     tls:
-      - hosts: [drone.kube.maelvls.dev]
-        secretName: drone-example-tls
+      - hosts: [concourse.kube.maelvls.dev]
+        secretName: concourse-example-tls
+concourse:
+  web:
+    externalUrl: https://concourse.kube.maelvls.dev
+    localAuth:
+      enabled: false
+    configRBAC: ""
+    auth:
+      mainTeam:
+        config: |
+          roles:
+          - name: member
+            github:
+              users: ["maelvls"]
+              orgs: ["ori-edge"]
+        github:
+          enabled: true
+          ## List of whitelisted GitHub users
+          ##
+          user: [maelvls]
+
+          ## List of whitelisted GitHub orgs
+          ##
+          org: [ori-edge]
+
+          ## List of whitelisted GitHub teams
+          ##
+          team: []
+      github:
+        enabled: true
 secrets:
-  githubClientId: 4e8d7f3224fdc115d094
-  # github-client-secret is stored in the [release-name]-concourse
-  # secret.
+  create: true
+  githubClientId: 0b8bc6b96d29b4fcb685
+  # github-client-secret is stored in the concourse/concourse-web secret.
+  # Must pass --set secrets.githubClientSecret=$GITHUB_CLIENT_SECRET to
+  # helm.
+worker:
+  replicas: 1

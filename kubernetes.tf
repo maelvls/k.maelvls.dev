@@ -39,30 +39,30 @@ resource "google_container_cluster" "k8s-cluster" {
   initial_node_count = 1
 }
 
-resource "google_service_account" "kubernetes_cluster_account" {
-  account_id = "kubernetes-cluster-account"
-}
+# resource "google_service_account" "kubernetes_cluster_account" {
+#   account_id = "kubernetes-cluster-account"
+# }
 
-resource "google_service_account_iam_binding" "kubernetes_cluster_account_binding1" {
-  service_account_id = google_service_account.kubernetes_cluster_account.account_id
-  role = "roles/compute.admin"
-}
+# resource "google_service_account_iam_binding" "kubernetes_cluster_account_binding1" {
+#   service_account_id = google_service_account.kubernetes_cluster_account.account_id
+#   role = "roles/compute.admin"
+# }
 
-resource "google_service_account_iam_binding" "kubernetes_cluster_account_binding2" {
-  service_account_id = google_service_account.kubernetes_cluster_account.account_id
-  role = "roles/storage.objectViewer"
-}
+# resource "google_service_account_iam_binding" "kubernetes_cluster_account_binding2" {
+#   service_account_id = google_service_account.kubernetes_cluster_account.account_id
+#   role = "roles/storage.objectViewer"
+# }
 
-resource "google_service_account_iam_binding" "kubernetes_cluster_account_binding3" {
-  service_account_id = google_service_account.kubernetes_cluster_account.account_id
-  role = "roles/storage.objectViewer"
-}
+# resource "google_service_account_iam_binding" "kubernetes_cluster_account_binding3" {
+#   service_account_id = google_service_account.kubernetes_cluster_account.account_id
+#   role = "roles/storage.objectViewer"
+# }
 
 resource "google_container_node_pool" "worker" {
   name       = "worker"
   location   = var.location
   cluster    = google_container_cluster.k8s-cluster.name
-  node_count = 1
+  node_count = 2
 
   node_config {
     preemptible  = true

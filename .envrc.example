@@ -1,4 +1,5 @@
 export CLOUDSDK_CORE_ACCOUNT=some@gmail.com
 export VAULT_ADDR=https://vault.kube.maelvls.dev
 export KUBECONFIG=~/.kube/configs/august-period-234610-gke
-export GITHUB_CLIENT_SECRET=50eef2790b03bb0a9512ec5e708e9acaf047f385
+export GITHUB_CLIENT_ID=
+export GITHUB_CLIENT_SECRET=

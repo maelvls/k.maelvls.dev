@@ -33,18 +33,18 @@ helm init --service-account tiller --history-max 200
 kubectl create namespace cert-manager
 kubectl apply -f https://raw.githubusercontent.com/jetstack/cert-manager/master/deploy/manifests/00-crds.yaml --validate=false
 helm repo add jetstack https://charts.jetstack.io && helm repo update
-helm install cert-manager jetstack/cert-manager --values helm/cert-manager.yaml --namespace cert-manager
+helm install --namespace cert-manager cert-manager jetstack/cert-manager --values helm/cert-manager.yaml 
 kubectl apply -f k8s/cert-manager-issuers.yaml
 
 kubectl create namespace traefik
-helm install traefik stable/traefik --values helm/traefik.yaml --namespace traefik
+helm install --namespace traefik traefik stable/traefik --values helm/traefik.yaml 
 
 kubectl create namespace external-dns
 # Create a zone first (not idempotent)
 gcloud dns managed-zones create maelvls --description "My DNS zone" --dns-name=maelvls.dev
 gcloud iam service-accounts create external-dns --display-name "For external-dns"
 gcloud projects add-iam-policy-binding august-period-234610 --role='roles/dns.admin' --member='serviceAccount:dns-exporter@august-period-234610.iam.gserviceaccount.com'
-helm install external-dns stable/external-dns --values helm/external-dns.yaml --namespace external-dns
+helm install --namespace external-dns external-dns stable/external-dns --values helm/external-dns.yaml
 gcloud iam service-accounts keys create /dev/stdout --iam-account dns-exporter@august-period-234610.iam.gserviceaccount.com | kubectl -n external-dns create secret generic external-dns --from-file=credentials.json=/dev/stdin
 
 
@@ -52,7 +52,11 @@ gcloud iam service-accounts keys create /dev/stdout --iam-account dns-exporter@a
 kubectl create namespace drone
 kubectl -n drone create secret generic drone-server-secrets --from-literal=clientSecret=$GITHUB_CLIENT_SECRET
 kubectl -n drone get secret drone-server-secrets -ojsonpath='{.data.clientSecret}' | base64 -d
-helm install drone stable/drone --namespace drone --values helm/drone.yaml
+helm install --namespace drone drone stable/drone  --values helm/drone.yaml
+
+# Concourse-related
+helm repo add concourse https://concourse-charts.storage.googleapis.com
+helm install --namespace concourse concourse concourse/concourse --values helm/concourse.yaml --set secrets.githubClientSecret=$C_GITHUB_CLIENT_SECRET
 
 # Vault-related (https://github.com/hashicorp/vault-helm)
 kubectl create namespace vault
@@ -61,7 +65,7 @@ gcloud iam service-accounts create vault-kms --display-name "Vault needs access 
 gcloud projects add-iam-policy-binding august-period-234610 --role='roles/cloudkms.cryptoKeyEncrypterDecrypter' --member='serviceAccount:vault-kms@august-period-234610.iam.gserviceaccount.com'
 gcloud iam service-accounts keys create /dev/stdout --iam-account vault-kms@august-period-234610.iam.gserviceaccount.com | kubectl -n vault create secret generic vault-kms --from-file=credentials.json=/dev/stdin
 git clone https://github.com/hashicorp/vault-helm /tmp || git -C /tmp/vault-helm pull
-helm install vault /tmp/vault-helm --values helm/vault.yaml --namespace vault
+helm install --namespace vault vault /tmp/vault-helm --values helm/vault.yaml 
 
 # Next steps are manual:
 kubectl -n vault port-forward vault-0 8200
@@ -79,7 +83,7 @@ gcloud iam service-accounts keys create credentials.json --iam-account vault-sto
 kubectl -n vault create secret generic vault-storage-cred-file --from-file=credentials.json=credentials.json
 
 # helm repo add incubator http://storage.googleapis.com/kubernetes-charts-incubator
-# helm install vault incubator/vault --namespace vault --values helm/vault.yaml
+# helm --namespace vault install vault incubator/vault  --values helm/vault.yaml
 git clone https://github.com/hashicorp/vault-helm helm/vault-helm
 helm install vault ./helm/vault-helm --values helm/vault.yaml
 ```
@@ -87,8 +91,8 @@ helm install vault ./helm/vault-helm --values helm/vault.yaml
 Extras:
 
 ```sh
-helm install kubernetes-dashboard stable/kubernetes-dashboard --values helm/kubernetes-dashboard.yaml --namespace kube-system
-helm install operator stable/prometheus-operator --namespace kube-system --values helm/operator.yaml
+helm install kubernetes-dashboard stable/kubernetes-dashboard --values helm/kubernetes-dashboard --namespace kube-system.yaml 
+helm install --namespace kube-system operator stable/prometheus-operator  --values helm/operator.yaml
 kubectl apply -f k8s/grafana-dashboards.yaml
 ```
 

@@ -14,15 +14,16 @@ dashboard:
       - hosts: [traefik.kube.maelvls.dev]
         secretName: traefik-example-tls
 
-kubernetes:
-  namespaces:
-    - awx
-    - default
-    - kube-system
-    - quote-svc
-    - vault
-    - drone
-    - traefik
+# If kubernetes.namespaces isn't set, all namespaces are watched.
+# kubernetes:
+#   namespaces:
+#     - awx
+#     - default
+#     - kube-system
+#     - quote-svc
+#     - vault
+#     - drone
+#     - traefik
 
 # We use cloudflare. As soon as the LoadBalancer has an external IP, I want
 # to add a 'A' record to cloudflare.
