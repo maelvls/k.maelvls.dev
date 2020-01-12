@@ -27,18 +27,18 @@ terraform apply
 ./post-install.sh
 source .envrc # if you have direnv, skip this
 
-kubectl apply -f k8s/helm-tiller-rbac.yml
-helm init --service-account tiller --history-max 200
-
+# Cert-manager related.
 kubectl create namespace cert-manager
 kubectl apply -f https://raw.githubusercontent.com/jetstack/cert-manager/master/deploy/manifests/00-crds.yaml --validate=false
 helm repo add jetstack https://charts.jetstack.io && helm repo update
-helm install --namespace cert-manager cert-manager jetstack/cert-manager --values helm/cert-manager.yaml 
+helm install --namespace cert-manager cert-manager jetstack/cert-manager --values helm/cert-manager.yaml
 kubectl apply -f k8s/cert-manager-issuers.yaml
 
+# Traefil-related. I use traefil
 kubectl create namespace traefik
-helm install --namespace traefik traefik stable/traefik --values helm/traefik.yaml 
+helm install --namespace traefik traefik stable/traefik --values helm/traefik.yaml
 
+# External-dns related.
 kubectl create namespace external-dns
 # Create a zone first (not idempotent)
 gcloud dns managed-zones create maelvls --description "My DNS zone" --dns-name=maelvls.dev
