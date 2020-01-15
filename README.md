@@ -47,6 +47,10 @@ gcloud projects add-iam-policy-binding august-period-234610 --role='roles/dns.ad
 helm install --namespace external-dns external-dns stable/external-dns --values helm/external-dns.yaml
 gcloud iam service-accounts keys create /dev/stdout --iam-account dns-exporter@august-period-234610.iam.gserviceaccount.com | kubectl -n external-dns create secret generic external-dns --from-file=credentials.json=/dev/stdin
 
+# Minio-related
+helm install --namespace minio minio stable/minio --values helm/minio.yml
+# mc config host add maelvls https://minio.kube.maelvls.dev AKIAIOSFODNN7EXAMPLE wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY --api=s3v4 --lookup=dns
+# mc ls maelvls/
 
 # Drone-related (don't forget to setup .envrc.example)
 kubectl create namespace drone
@@ -54,7 +58,7 @@ kubectl -n drone create secret generic drone-server-secrets --from-literal=clien
 kubectl -n drone get secret drone-server-secrets -ojsonpath='{.data.clientSecret}' | base64 -d
 helm install --namespace drone drone stable/drone  --values helm/drone.yaml
 
-# Concourse-related
+# Concourse-related (https://github.com/concourse/concourse-chart)
 helm repo add concourse https://concourse-charts.storage.googleapis.com
 helm install --namespace concourse concourse concourse/concourse --values helm/concourse.yaml --set secrets.githubClientSecret=$C_GITHUB_CLIENT_SECRET
 
@@ -65,8 +69,7 @@ gcloud iam service-accounts create vault-kms --display-name "Vault needs access 
 gcloud projects add-iam-policy-binding august-period-234610 --role='roles/cloudkms.cryptoKeyEncrypterDecrypter' --member='serviceAccount:vault-kms@august-period-234610.iam.gserviceaccount.com'
 gcloud iam service-accounts keys create /dev/stdout --iam-account vault-kms@august-period-234610.iam.gserviceaccount.com | kubectl -n vault create secret generic vault-kms --from-file=credentials.json=/dev/stdin
 git clone https://github.com/hashicorp/vault-helm /tmp || git -C /tmp/vault-helm pull
-helm install --namespace vault vault /tmp/vault-helm --values helm/vault.yaml 
-
+helm install --namespace vault vault /tmp/vault-helm --values helm/vault.yaml
 # Next steps are manual:
 kubectl -n vault port-forward vault-0 8200
 kubectl -n vault exec -it vault-0 sh
@@ -74,6 +77,18 @@ vault operator init # Copy the 'Initial Root Token'
 vault login -method=token
 # You may run vault (CLI) like this:
 # $ kubectl -n vault exec -it vault-0 sh
+vault auth enable oidc
+vault write auth/oidc/config \
+        oidc_discovery_url="https://github.com/.well-known" \
+        oidc_client_id="$VAULT_GITHUB_CLIENT_ID" \
+        oidc_client_secret="$VAULT_GITHUB_CLIENT_SECRET" \
+        default_role="reader"
+vault write auth/oidc/role/reader \
+        bound_audiences="$VAULT_GITHUB_CLIENT_ID" \
+        allowed_redirect_uris="https://vault.kube.maelvls.dev/ui/vault/auth/oidc/oidc/callback" \
+        allowed_redirect_uris="https://vault.kube.maelvls.dev/oidc/callback" \
+        user_claim="sub" \
+        policies="reader"
 
 # Vault-related (incubator helm)
 # Create a service account for 'vault' storage

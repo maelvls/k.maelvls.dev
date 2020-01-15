@@ -8,6 +8,9 @@ web:
     tls:
       - hosts: [concourse.kube.maelvls.dev]
         secretName: concourse-example-tls
+  resources:
+      requests:
+        cpu: 0m
 concourse:
   web:
     externalUrl: https://concourse.kube.maelvls.dev
@@ -45,3 +48,10 @@ secrets:
   # helm.
 worker:
   replicas: 1
+  resources:
+    requests:
+      cpu: 0m
+postgresql:
+  resources:
+    requests:
+      cpu: 0m
