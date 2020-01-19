@@ -22,6 +22,15 @@ server:
       name: vault-kms
       path: null # default is `/vault/userconfig/<name>`
 
+# Purpose: avoid replicaset unable to launch in kube-system ns.
+# https://github.com/hashicorp/vault-helm/issues/158
+#
+# Error creating: Internal error occurred: admission webhook
+# "vault.hashicorp.com" denied the request: error with request namespace: cannot
+# inject into system namespaces: kube-system
+injector:
+  enabled: false
+
   # This configures the Vault Statefulset to create a PVC for data
   # storage when using the file backend.
   # See https://www.vaultproject.io/docs/configuration/storage/index.html to know more

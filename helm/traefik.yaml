@@ -40,3 +40,15 @@ kubernetes:
 # service:
 #   annotations:
 #     external-dns.alpha.kubernetes.io/hostname: "*.kube.maelvls.dev"
+
+# By default, the chart uses type: LoadBalancer, which creates a GCP Network
+# Load Balancer which costs over €0.5 per day. Since my cluster does definitely
+# not requires this, I'm just going to rely on a 80/443 NodePort.
+# serviceType: NodePort
+# service:
+#   nodePorts:
+#     http: 80
+#     https: 443
+# See
+# https://github.com/kontena/akrobateo
+# https://serverfault.com/questions/801189/expose-port-80-and-443-on-google-container-engine-without-load-balancer

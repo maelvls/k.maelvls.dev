@@ -3,10 +3,13 @@ ingress:
   annotations:
     kubernetes.io/ingress.class: traefik
     cert-manager.io/cluster-issuer: letsencrypt-prod
-  hosts: [minio.kube.maelvls.dev]
+  hosts: [minio.kube.maelvls.dev, "*.minio.kube.maelvls.dev"]
   tls:
-    - hosts: [minio.kube.maelvls.dev]
+    - hosts: ["minio.kube.maelvls.dev", "*.minio.kube.maelvls.dev"]
       secretName: minio-example-tls
 resources:
   requests:
     cpu: 0m
+environment:
+  MINIO_BROWSER: on
+  MINIO_DOMAIN: minio.kube.maelvls.dev

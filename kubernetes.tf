@@ -78,6 +78,30 @@ resource "google_container_node_pool" "worker" {
   }
 }
 
+// On us-east1, the always-free free-tier includes one f1.micro per month
+// (equivalent 720h/mo).
+resource "google_container_node_pool" "worker-micro" {
+  name       = "worker-micro"
+  location   = var.location
+  cluster    = google_container_cluster.k8s-cluster.name
+  node_count = 1
+
+  node_config {
+    preemptible  = false
+    machine_type = "f1-micro"
+    labels = {
+      "preemptible" = "false"
+    }
+    oauth_scopes = [
+      "https://www.googleapis.com/auth/compute",
+      "https://www.googleapis.com/auth/devstorage.read_only",
+      "https://www.googleapis.com/auth/logging.write",
+      "https://www.googleapis.com/auth/monitoring",
+      "https://www.googleapis.com/auth/cloudkms",
+    ]
+  }
+}
+
 output "cluster_name" {
   value = google_container_cluster.k8s-cluster.name
 }

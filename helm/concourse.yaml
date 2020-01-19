@@ -11,6 +11,11 @@ web:
   resources:
       requests:
         cpu: 0m
+
+# Each worker would take 20Gi of PVC. That costs!
+persistence:
+  enabled: false
+
 concourse:
   web:
     externalUrl: https://concourse.kube.maelvls.dev

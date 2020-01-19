@@ -13,10 +13,16 @@ spec:
       name: example-issuer-account-key-staging
     # Enable the HTTP01 challenge mechanism for this Issuer
     solvers:
-      - selector: {}
-        http01:
+      - http01:
           ingress:
             class: traefik
+      # For some reasons, ingress hosts with a wildcard must use DNS01.
+      - dns01:
+          clouddns:
+            project: august-period-234610
+            serviceAccountSecretRef:
+              name: jsonkey
+              key: credentials.json
 
 ---
 apiVersion: cert-manager.io/v1alpha2
@@ -34,7 +40,13 @@ spec:
       name: example-issuer-account-letsencrypt-prod
     # Enable the HTTP01 challenge mechanism for this Issuer
     solvers:
-      - selector: {}
-        http01:
+      - http01:
           ingress:
             class: traefik
+      # For some reasons, ingress hosts with a wildcard must use DNS01.
+      - dns01:
+          clouddns:
+            project: august-period-234610
+            serviceAccountSecretRef:
+              name: jsonkey
+              key: credentials.json

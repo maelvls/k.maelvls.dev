@@ -34,7 +34,12 @@ helm repo add jetstack https://charts.jetstack.io && helm repo update
 helm install --namespace cert-manager cert-manager jetstack/cert-manager --values helm/cert-manager.yaml
 kubectl apply -f k8s/cert-manager-issuers.yaml
 
-# Traefil-related. I use traefil
+gcloud iam service-accounts create cert-manager --display-name "For cert-manager's dns01"
+gcloud projects add-iam-policy-binding august-period-234610 --role='roles/dns.admin' --member='serviceAccount:cert-manager@august-period-234610.iam.gserviceaccount.com'
+helm install --namespace external-dns external-dns stable/external-dns --values helm/external-dns.yaml
+gcloud iam service-accounts keys create /dev/stdout --iam-account cert-manager@august-period-234610.iam.gserviceaccount.com | kubectl -n cert-manager create secret generic jsonkey --from-file=credentials.json=/dev/stdin
+
+# Traefik-related. I use traefik since its ingress support is excellent.
 kubectl create namespace traefik
 helm install --namespace traefik traefik stable/traefik --values helm/traefik.yaml
 
@@ -47,9 +52,13 @@ gcloud projects add-iam-policy-binding august-period-234610 --role='roles/dns.ad
 helm install --namespace external-dns external-dns stable/external-dns --values helm/external-dns.yaml
 gcloud iam service-accounts keys create /dev/stdout --iam-account dns-exporter@august-period-234610.iam.gserviceaccount.com | kubectl -n external-dns create secret generic external-dns --from-file=credentials.json=/dev/stdin
 
+# Load Balancer. I avoid GCE's Network Load Balancer, too expensive
+kubectl apply -k https://github.com/kontena/akrobateo/deploy
+gcloud compute firewall-rules create akrobateo-fw-traefik --allow tcp:80,tcp:443 --source-ranges=0.0.0.0/0
+
 # Minio-related
 helm install --namespace minio minio stable/minio --values helm/minio.yml
-# mc config host add maelvls https://minio.kube.maelvls.dev AKIAIOSFODNN7EXAMPLE wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY --api=s3v4 --lookup=dns
+# mc config host add maelvls https://minio.kube.maelvls.dev AKIAIOSFODNN7EXAMPLE wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY --api=s3v4 --lookup=auto
 # mc ls maelvls/
 
 # Drone-related (don't forget to setup .envrc.example)
@@ -68,7 +77,7 @@ gcloud kms keyrings create vault-auto-seal-key-ring --location=global
 gcloud iam service-accounts create vault-kms --display-name "Vault needs access to KMS for auto-seal"
 gcloud projects add-iam-policy-binding august-period-234610 --role='roles/cloudkms.cryptoKeyEncrypterDecrypter' --member='serviceAccount:vault-kms@august-period-234610.iam.gserviceaccount.com'
 gcloud iam service-accounts keys create /dev/stdout --iam-account vault-kms@august-period-234610.iam.gserviceaccount.com | kubectl -n vault create secret generic vault-kms --from-file=credentials.json=/dev/stdin
-git clone https://github.com/hashicorp/vault-helm /tmp || git -C /tmp/vault-helm pull
+git clone https://github.com/hashicorp/vault-helm /tmp/vault-helm || git -C /tmp/vault-helm pull
 helm install --namespace vault vault /tmp/vault-helm --values helm/vault.yaml
 # Next steps are manual:
 kubectl -n vault port-forward vault-0 8200
