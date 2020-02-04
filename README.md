@@ -14,11 +14,6 @@ and featuring.
 - Kubernetes dashboard + heapster
 - and of course Vault on <https://vault.kube.maelvls.dev>
 
-The whole thing should fit on a single `n1-standard-4` node (4 vCPUs, 15GB
-RAM), although it should be better with a least two nodes (memcached will
-complain about not being able to scale two replicas on two different
-nodes).
-
 Then:
 
 ```sh
@@ -71,6 +66,11 @@ helm install --namespace drone drone stable/drone  --values helm/drone.yaml
 helm repo add concourse https://concourse-charts.storage.googleapis.com
 helm install --namespace concourse concourse concourse/concourse --values helm/concourse.yaml --set secrets.githubClientSecret=$C_GITHUB_CLIENT_SECRET
 
+# Tekton-related.
+kubectl apply -f https://storage.googleapis.com/tekton-releases/pipeline/latest/release.yaml
+kubectl apply -f https://github.com/tektoncd/dashboard/releases/download/v0.4.1/dashboard_latest_release.yaml
+kubectl apply -f k8s/tekton-dashboard-ingress.yaml
+
 # Vault-related (https://github.com/hashicorp/vault-helm)
 kubectl create namespace vault
 gcloud kms keyrings create vault-auto-seal-key-ring --location=global
@@ -115,7 +115,10 @@ helm install vault ./helm/vault-helm --values helm/vault.yaml
 Extras:
 
 ```sh
-helm install kubernetes-dashboard stable/kubernetes-dashboard --values helm/kubernetes-dashboard --namespace kube-system.yaml 
+kubectl create ns kubernetes-dashboard
+git clone https://github.com/kubernetes/dashboard --depth=1 /tmp/dashboard || git -C /tmp/dashboard pull
+helm install --namespace kubernetes-dashboard kubernetes-dashboard /tmp/dashboard --values helm/kubernetes-dashboard.yaml
+
 helm install --namespace kube-system operator stable/prometheus-operator  --values helm/operator.yaml
 kubectl apply -f k8s/grafana-dashboards.yaml
 ```
