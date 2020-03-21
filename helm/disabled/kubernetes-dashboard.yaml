@@ -1,0 +1,28 @@
+# https://docs.cert-manager.io/en/latest/tasks/issuing-certificates/ingress-shim.html#
+ingress:
+  enabled: true
+  hosts: [dashboard.k.maelvls.dev]
+  annotations:
+    kubernetes.io/ingress.class: traefik
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    ingress.kubernetes.io/protocol: http
+  tls:
+    - hosts: [dashboard.k.maelvls.dev]
+      secretName: dashboard-example-tls
+image:
+  repository: kubernetesui/dashboard
+  tag: v2.0.0-rc2
+
+extraArgs:
+  - --namespace=kubernetes-dashboard
+
+resources:
+  requests:
+    cpu: 0m
+    memory: 0Mi
+
+securityContext: ""
+
+protocolHttp: true
+service:
+  externalPort: 80

@@ -1,0 +1,19 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: tekton-dashboard
+  namespace: tekton-pipelines
+  annotations:
+    kubernetes.io/ingress.class: traefik
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+spec:
+  rules:
+    - host: tekton.k.maelvls.dev
+      http:
+        paths:
+          - backend:
+              serviceName: tekton-dashboard
+              servicePort: http
+  tls:
+    - hosts: [tekton.k.maelvls.dev]
+      secretName: tekton-example-tls

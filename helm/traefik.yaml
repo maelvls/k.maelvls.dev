@@ -9,14 +9,15 @@ ssl:
 # https://docs.cert-manager.io/en/latest/tasks/issuing-certificates/ingress-shim.html#
 dashboard:
   enabled: true
-  domain: traefik.kube.maelvls.dev
+  # domain: traefik.k.maelvls.dev
   ingress:
-    annotations:
-      kubernetes.io/ingress.class: traefik
-      cert-manager.io/cluster-issuer: letsencrypt-prod
-    tls:
-      - hosts: [traefik.kube.maelvls.dev]
-        secretName: traefik-example-tls
+    enabled: false
+  #   annotations:
+  #     kubernetes.io/ingress.class: traefik
+  #     cert-manager.io/cluster-issuer: letsencrypt-prod
+  #   tls:
+  #     - hosts: [traefik.k.maelvls.dev]
+  #       secretName: traefik-example-tls
 
 kubernetes:
   # If kubernetes.namespaces isn't set, all namespaces are watched.
@@ -28,18 +29,17 @@ kubernetes:
     #
     # https://github.com/containous/traefik/issues/2173#issuecomment-434271161
     publishedService: "traefik/traefik"
-
 # I use Google's Cloud DNS. As soon as the LoadBalancer has an external IP, I
 # want to add a 'A' record to Cloud DNS.
 # https://github.com/kubernetes-sigs/external-dns/blob/master/docs/tutorials/gke.md
 #
 # I can use that setting when I one a single A record that matches all
-# subdomains like *.kube.maelvls.dev.
+# subdomains like *.k.maelvls.dev.
 #
 # I do not use it since I want each Ingress to have its own A record.
 # service:
 #   annotations:
-#     external-dns.alpha.kubernetes.io/hostname: "*.kube.maelvls.dev"
+#     external-dns.alpha.kubernetes.io/hostname: "*.k.maelvls.dev"
 
 # By default, the chart uses type: LoadBalancer, which creates a GCP Network
 # Load Balancer which costs over €0.5 per day. Since my cluster does definitely

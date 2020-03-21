@@ -22,7 +22,7 @@ spec:
             project: august-period-234610
             serviceAccountSecretRef:
               name: jsonkey
-              key: credentials.json
+              key: jsonkey
 
 ---
 apiVersion: cert-manager.io/v1alpha2
@@ -49,4 +49,4 @@ spec:
             project: august-period-234610
             serviceAccountSecretRef:
               name: jsonkey
-              key: credentials.json
+              key: jsonkey

@@ -1,13 +1,21 @@
 export CLOUDSDK_CORE_ACCOUNT=some@gmail.com
-export VAULT_ADDR=https://vault.kube.maelvls.dev
-export KUBECONFIG=~/.kube/configs/august-period-234610-gke
+
+export VAULT_ADDR=https://vault.k.maelvls.dev
 
 # Drone
 export GITHUB_CLIENT_ID=
 export GITHUB_CLIENT_SECRET=
+
 # Concourse
 export C_GITHUB_CLIENT_ID=
 export C_GITHUB_CLIENT_SECRET=
+
 # Vault
 export VAULT_GITHUB_CLIENT_ID=
 export VAULT_GITHUB_CLIENT_SECRET=
+
+# Minio
+export MINIO_ACCESS_KEY=
+export MINIO_SECRET_KEY=
+
+#

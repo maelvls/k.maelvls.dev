@@ -4,13 +4,13 @@ web:
     annotations:
       kubernetes.io/ingress.class: traefik
       cert-manager.io/cluster-issuer: letsencrypt-prod
-    hosts: [concourse.kube.maelvls.dev]
+    hosts: [concourse.k.maelvls.dev]
     tls:
-      - hosts: [concourse.kube.maelvls.dev]
+      - hosts: [concourse.k.maelvls.dev]
         secretName: concourse-example-tls
   resources:
-      requests:
-        cpu: 0m
+    requests:
+      cpu: 0m
 
 # Each worker would take 20Gi of PVC. That costs!
 persistence:
@@ -18,7 +18,7 @@ persistence:
 
 concourse:
   web:
-    externalUrl: https://concourse.kube.maelvls.dev
+    externalUrl: https://concourse.k.maelvls.dev
     localAuth:
       enabled: false
     configRBAC: ""

@@ -5,12 +5,20 @@ ingress:
   annotations:
     kubernetes.io/ingress.class: traefik
     cert-manager.io/cluster-issuer: letsencrypt-prod
-  hosts: [drone.kube.maelvls.dev]
+  hosts:
+    - host: drone.k.maelvls.dev
+      paths:
+        - /
   tls:
-    - hosts: [drone.kube.maelvls.dev]
+    - hosts: [drone.k.maelvls.dev]
       secretName: drone-example-tls
 sourceControl:
   secret: drone-server-secrets
   provider: github
   github:
     clientID: 4e8d7f3224fdc115d094
+
+# Don't forget to set DRONE_GITHUB_CLIENT_ID, DRONE_GITHUB_CLIENT_SECRET
+# and DRONE_RPC_SECRET.
+env:
+  DRONE_SERVER_HOST: drone.k.maelvls.dev

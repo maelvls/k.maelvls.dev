@@ -2,15 +2,15 @@ image:
   tag: latest
 ingress:
   enabled: true
-  hosts: [quote.kube.maelvls.dev]
+  hosts: [quote.k.maelvls.dev]
   annotations:
     kubernetes.io/ingress.class: traefik
     cert-manager.io/cluster-issuer: letsencrypt-staging
     ingress.kubernetes.io/protocol: h2c
   tls:
-    - hosts: [quote.kube.maelvls.dev]
+    - hosts: [quote.k.maelvls.dev]
       secretName: quote-example-tls
 
 service:
   annotations:
-    external-dns.alpha.kubernetes.io/hostname: "quote.kube.maelvls.dev"
+    external-dns.alpha.kubernetes.io/hostname: "quote.k.maelvls.dev"

@@ -4,15 +4,15 @@ Infra-as-code (terraform + helm 3) for creating a Kubernetes cluster with Vault
 and featuring.
 
 - external DNS configured dynamically by the cluster when the LoadBalancer
-  (traefik) gets its external IP. Regarding the fqdn `*.kube.maelvls.dev`:
+  (traefik) gets its external IP. Regarding the fqdn `*.k.maelvls.dev`:
   at first, I was using Cloudflare and a domain at Godaddy. Now, I use a
   Google Domain and Google Cloud DNS.
 - Letsencrypt certificates rotated automatically on a per-ingress basis
 - Metrics using prometheus operator (prometheus, node exporter,
   alertmanager, kube-state-metrics) with grafana on
-  <https://grafana.kube.maelvls.dev>
+  <https://grafana.k.maelvls.dev>
 - Kubernetes dashboard + heapster
-- and of course Vault on <https://vault.kube.maelvls.dev>
+- and of course Vault on <https://vault.k.maelvls.dev>
 
 Then:
 
@@ -22,45 +22,48 @@ terraform apply
 ./post-install.sh
 source .envrc # if you have direnv, skip this
 
-# Cert-manager related.
+gcloud dns managed-zones create maelvls --description "My DNS zone" --dns-name=maelvls.dev
+
+# Cert-manager related. NOTE: when trying to recreate a serviceaccount, first
+# delete the role bindings! Otherwise, the recreated serviceaccount will not
+# have the right role binding, see
+# https://twitter.com/maelvls/status/1239104479951310848.
 kubectl create namespace cert-manager
+gcloud iam service-accounts create cert-manager --display-name "For cert-manager dns01 challenge"
+gcloud projects add-iam-policy-binding august-period-234610 --role='roles/dns.admin' --member='serviceAccount:cert-manager@august-period-234610.iam.gserviceaccount.com'
+gcloud iam service-accounts keys create /dev/stdout --iam-account cert-manager@august-period-234610.iam.gserviceaccount.com | kubectl -n cert-manager create secret generic jsonkey --from-file=jsonkey=/dev/stdin
 kubectl apply -f https://raw.githubusercontent.com/jetstack/cert-manager/master/deploy/manifests/00-crds.yaml --validate=false
 helm repo add jetstack https://charts.jetstack.io && helm repo update
 helm install --namespace cert-manager cert-manager jetstack/cert-manager --values helm/cert-manager.yaml
 kubectl apply -f k8s/cert-manager-issuers.yaml
 
-gcloud iam service-accounts create cert-manager --display-name "For cert-manager's dns01"
-gcloud projects add-iam-policy-binding august-period-234610 --role='roles/dns.admin' --member='serviceAccount:cert-manager@august-period-234610.iam.gserviceaccount.com'
-helm install --namespace external-dns external-dns stable/external-dns --values helm/external-dns.yaml
-gcloud iam service-accounts keys create /dev/stdout --iam-account cert-manager@august-period-234610.iam.gserviceaccount.com | kubectl -n cert-manager create secret generic jsonkey --from-file=credentials.json=/dev/stdin
+# External-dns related.
+kubectl create namespace external-dns
+gcloud iam service-accounts create external-dns --display-name "For external-dns"
+gcloud projects add-iam-policy-binding august-period-234610 --role='roles/dns.admin' --member='serviceAccount:external-dns@august-period-234610.iam.gserviceaccount.com'
+gcloud iam service-accounts keys create /dev/stdout --iam-account external-dns@august-period-234610.iam.gserviceaccount.com | kubectl -n external-dns create secret generic external-dns --from-file=jsonkey=/dev/stdin
+helm repo add bitnami https://charts.bitnami.com/bitnami
+helm install --namespace external-dns external-dns bitnami/external-dns --values helm/external-dns.yaml
 
 # Traefik-related. I use traefik since its ingress support is excellent.
 kubectl create namespace traefik
 helm install --namespace traefik traefik stable/traefik --values helm/traefik.yaml
-
-# External-dns related.
-kubectl create namespace external-dns
-# Create a zone first (not idempotent)
-gcloud dns managed-zones create maelvls --description "My DNS zone" --dns-name=maelvls.dev
-gcloud iam service-accounts create external-dns --display-name "For external-dns"
-gcloud projects add-iam-policy-binding august-period-234610 --role='roles/dns.admin' --member='serviceAccount:dns-exporter@august-period-234610.iam.gserviceaccount.com'
-helm install --namespace external-dns external-dns stable/external-dns --values helm/external-dns.yaml
-gcloud iam service-accounts keys create /dev/stdout --iam-account dns-exporter@august-period-234610.iam.gserviceaccount.com | kubectl -n external-dns create secret generic external-dns --from-file=credentials.json=/dev/stdin
 
 # Load Balancer. I avoid GCE's Network Load Balancer, too expensive
 kubectl apply -k https://github.com/kontena/akrobateo/deploy
 gcloud compute firewall-rules create akrobateo-fw-traefik --allow tcp:80,tcp:443 --source-ranges=0.0.0.0/0
 
 # Minio-related
+kubectl create namespace minio
+kubectl -n minio create secret generic minio --from-literal=accesskey=$MINIO_ACCESS_KEY --from-literal=secretkey=$MINIO_SECRET_KEY
 helm install --namespace minio minio stable/minio --values helm/minio.yml
-# mc config host add maelvls https://minio.kube.maelvls.dev AKIAIOSFODNN7EXAMPLE wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY --api=s3v4 --lookup=auto
+# mc config host add maelvls https://minio.k.maelvls.dev <1password> <1password> --api=s3v4 --lookup=auto
 # mc ls maelvls/
 
 # Drone-related (don't forget to setup .envrc.example)
 kubectl create namespace drone
-kubectl -n drone create secret generic drone-server-secrets --from-literal=clientSecret=$GITHUB_CLIENT_SECRET
-kubectl -n drone get secret drone-server-secrets -ojsonpath='{.data.clientSecret}' | base64 -d
-helm install --namespace drone drone stable/drone  --values helm/drone.yaml
+helm repo add drone https://charts.drone.io
+helm install --namespace drone drone drone/drone --values helm/drone.yaml --set env.DRONE_GITHUB_CLIENT_ID=$DRONE_GITHUB_CLIENT_ID --set env.DRONE_GITHUB_CLIENT_SECRET=$DRONE_GITHUB_CLIENT_SECRET --set env.DRONE_RPC_SECRET=$DRONE_RPC_SECRET
 
 # Concourse-related (https://github.com/concourse/concourse-chart)
 helm repo add concourse https://concourse-charts.storage.googleapis.com
@@ -94,8 +97,8 @@ vault write auth/oidc/config \
         default_role="reader"
 vault write auth/oidc/role/reader \
         bound_audiences="$VAULT_GITHUB_CLIENT_ID" \
-        allowed_redirect_uris="https://vault.kube.maelvls.dev/ui/vault/auth/oidc/oidc/callback" \
-        allowed_redirect_uris="https://vault.kube.maelvls.dev/oidc/callback" \
+        allowed_redirect_uris="https://vault.k.maelvls.dev/ui/vault/auth/oidc/oidc/callback" \
+        allowed_redirect_uris="https://vault.k.maelvls.dev/oidc/callback" \
         user_claim="sub" \
         policies="reader"
 
@@ -162,7 +165,9 @@ open http://127.0.0.1:8001/api/v1/namespaces/kube-system/services/https:kubernet
 
 ### Error with some ingress+service
 
-    error while evaluating the ingress spec: service is type "ClusterIP", expected "NodePort" or "LoadBalancer"
+```sh
+Error while evaluating the ingress spec: service is type "ClusterIP", expected "NodePort" or "LoadBalancer"
+```
 
 I realized this is because, in the Ingress, the portNumber must be a name,
 not a number. See: <https://stackoverflow.com/questions/51572249>
@@ -179,7 +184,7 @@ SOLUTION: I could only have one external IP at any time because of the free
 trial. For some reason, I had already created a static IP in GCP. As soon
 as I removed it, the LoadBalancer got an external IP.
 
-### Trafik logs
+### Traefik does not register an Ingress
 
 ```json
 {

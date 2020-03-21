@@ -11,10 +11,10 @@ server:
       kubernetes.io/ingress.class: traefik
       cert-manager.io/cluster-issuer: letsencrypt-prod
     hosts:
-      - host: vault.kube.maelvls.dev
+      - host: vault.k.maelvls.dev
         paths: [/]
     tls:
-      - hosts: [vault.kube.maelvls.dev]
+      - hosts: [vault.k.maelvls.dev]
         secretName: vault-tls
 
   extraVolumes:

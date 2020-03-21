@@ -10,34 +10,24 @@ provider "google" {
   region  = "us-east1"
 }
 
-variable "location" {
-  default     = "us-east1-c"
-  description = "region (europe-west1) or zone (europe-west1-d)"
-  type        = string
+
+resource "google_dns_managed_zone" "maelvls" {
+  name        = "maelvls"
+  dns_name    = "example-.com."
+  description = "Example DNS zone"
+  labels = {
+    foo = "bar"
+  }
 }
 
-resource "google_container_cluster" "k8s-cluster" {
-  name                     = "august-period-234610"
-  remove_default_node_pool = true
-
-  location = var.location
-
-  master_auth {
-    username = ""
-    password = ""
-  }
-
-  logging_service    = "none"
-  monitoring_service = "none"
-
-  addons_config {
-    http_load_balancing {
-      disabled = true
-    }
-  }
-
-  initial_node_count = 1
+resource "random_id" "rnd" {
+  byte_length = 4
 }
+
+gcloud dns managed-zones create maelvls --description "My DNS zone" --dns-name=maelvls.dev
+
+
+
 
 # resource "google_service_account" "kubernetes_cluster_account" {
 #   account_id = "kubernetes-cluster-account"
@@ -58,57 +48,8 @@ resource "google_container_cluster" "k8s-cluster" {
 #   role = "roles/storage.objectViewer"
 # }
 
-resource "google_container_node_pool" "worker" {
-  name       = "worker"
-  location   = var.location
-  cluster    = google_container_cluster.k8s-cluster.name
-  node_count = 1
 
-  node_config {
-    preemptible  = true
-    machine_type = "n1-standard-1"
 
-    oauth_scopes = [
-      "https://www.googleapis.com/auth/compute",
-      "https://www.googleapis.com/auth/devstorage.read_only",
-      "https://www.googleapis.com/auth/logging.write",
-      "https://www.googleapis.com/auth/monitoring",
-      "https://www.googleapis.com/auth/cloudkms",
-    ]
-  }
-}
-
-// On us-east1, the always-free free-tier includes one f1.micro per month
-// (equivalent 720h/mo).
-resource "google_container_node_pool" "worker-micro" {
-  name       = "worker-micro"
-  location   = var.location
-  cluster    = google_container_cluster.k8s-cluster.name
-  node_count = 1
-
-  node_config {
-    preemptible  = false
-    machine_type = "f1-micro"
-    labels = {
-      "preemptible" = "false"
-    }
-    oauth_scopes = [
-      "https://www.googleapis.com/auth/compute",
-      "https://www.googleapis.com/auth/devstorage.read_only",
-      "https://www.googleapis.com/auth/logging.write",
-      "https://www.googleapis.com/auth/monitoring",
-      "https://www.googleapis.com/auth/cloudkms",
-    ]
-  }
-}
-
-output "cluster_name" {
-  value = google_container_cluster.k8s-cluster.name
-}
-
-output "location" {
-  value = google_container_cluster.k8s-cluster.location
-}
 
 # # external-dns
 # data "google_service_account" "myaccount" {
