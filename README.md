@@ -12,6 +12,10 @@ and featuring.
 Then:
 
 ```sh
+# Prerequisite:
+#  - have a Kubernetes cluster with the context "boring_wozniak".
+#  - have the Google Cloud project "august-period-234610" on us-east1.
+#  - have .envrc set with the env variables (see .envrc.example).
 terraform apply
 ./helm_apply
 ```
