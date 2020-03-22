@@ -1,13 +1,13 @@
-# Helm 3 + Vault + external-dns + cert-manager on GKE using Terraform
+# Terraform and Helm config for *.k.maelvls.dev
 
-Infra-as-code (terraform + helm 3) for creating a Kubernetes cluster with Vault
-and featuring.
+Infra-as-code (terraform + helm 3) for creating a Kubernetes cluster with:
 
 - external DNS configured dynamically by the cluster when the LoadBalancer
-  (traefik) gets its external IP. Regarding the fqdn `*.k.maelvls.dev`:
-  at first, I was using Cloudflare and a domain at Godaddy. Now, I use a
+  (traefik) gets its external IP. Regarding the fqdn `*.k.maelvls.dev`: at
+  first, I was using Cloudflare and a domain at Godaddy. Now, I use a
   Google Domain and Google Cloud DNS.
-- Letsencrypt certificates rotated automatically on a per-ingress basis.
+- Letsencrypt certificates rotated automatically on a per-ingress basis
+  using cert-manager.
 
 Then:
 
