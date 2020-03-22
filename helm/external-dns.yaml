@@ -8,7 +8,7 @@ sources: [ingress]
 provider: google
 google:
   project: august-period-234610
-  serviceAccountSecret: external-dns # kubectl get secret
+  serviceAccountSecret: jsonkey # kubectl get secret
 
 domainFilters: ["maelvls.dev"]
 

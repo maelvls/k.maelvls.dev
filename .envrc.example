@@ -3,8 +3,9 @@ export CLOUDSDK_CORE_ACCOUNT=some@gmail.com
 export VAULT_ADDR=https://vault.k.maelvls.dev
 
 # Drone
-export GITHUB_CLIENT_ID=
-export GITHUB_CLIENT_SECRET=
+export DRONE_GITHUB_CLIENT_ID=
+export DRONE_GITHUB_CLIENT_SECRET=
+export DRONE_RPC_SECRET=
 
 # Concourse
 export C_GITHUB_CLIENT_ID=
@@ -18,4 +19,3 @@ export VAULT_GITHUB_CLIENT_SECRET=
 export MINIO_ACCESS_KEY=
 export MINIO_SECRET_KEY=
 
-#

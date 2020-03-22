@@ -7,129 +7,13 @@ and featuring.
   (traefik) gets its external IP. Regarding the fqdn `*.k.maelvls.dev`:
   at first, I was using Cloudflare and a domain at Godaddy. Now, I use a
   Google Domain and Google Cloud DNS.
-- Letsencrypt certificates rotated automatically on a per-ingress basis
-- Metrics using prometheus operator (prometheus, node exporter,
-  alertmanager, kube-state-metrics) with grafana on
-  <https://grafana.k.maelvls.dev>
-- Kubernetes dashboard + heapster
-- and of course Vault on <https://vault.k.maelvls.dev>
+- Letsencrypt certificates rotated automatically on a per-ingress basis.
 
 Then:
 
 ```sh
-gcloud init
 terraform apply
-./post-install.sh
-source .envrc # if you have direnv, skip this
-
-gcloud dns managed-zones create maelvls --description "My DNS zone" --dns-name=maelvls.dev
-
-# Cert-manager related. NOTE: when trying to recreate a serviceaccount, first
-# delete the role bindings! Otherwise, the recreated serviceaccount will not
-# have the right role binding, see
-# https://twitter.com/maelvls/status/1239104479951310848.
-kubectl create namespace cert-manager
-gcloud iam service-accounts create cert-manager --display-name "For cert-manager dns01 challenge"
-gcloud projects add-iam-policy-binding august-period-234610 --role='roles/dns.admin' --member='serviceAccount:cert-manager@august-period-234610.iam.gserviceaccount.com'
-gcloud iam service-accounts keys create /dev/stdout --iam-account cert-manager@august-period-234610.iam.gserviceaccount.com | kubectl -n cert-manager create secret generic jsonkey --from-file=jsonkey=/dev/stdin
-kubectl apply -f https://raw.githubusercontent.com/jetstack/cert-manager/master/deploy/manifests/00-crds.yaml --validate=false
-helm repo add jetstack https://charts.jetstack.io && helm repo update
-helm install --namespace cert-manager cert-manager jetstack/cert-manager --values helm/cert-manager.yaml
-kubectl apply -f k8s/cert-manager-issuers.yaml
-
-# External-dns related.
-kubectl create namespace external-dns
-gcloud iam service-accounts create external-dns --display-name "For external-dns"
-gcloud projects add-iam-policy-binding august-period-234610 --role='roles/dns.admin' --member='serviceAccount:external-dns@august-period-234610.iam.gserviceaccount.com'
-gcloud iam service-accounts keys create /dev/stdout --iam-account external-dns@august-period-234610.iam.gserviceaccount.com | kubectl -n external-dns create secret generic external-dns --from-file=jsonkey=/dev/stdin
-helm repo add bitnami https://charts.bitnami.com/bitnami
-helm install --namespace external-dns external-dns bitnami/external-dns --values helm/external-dns.yaml
-
-# Traefik-related. I use traefik since its ingress support is excellent.
-kubectl create namespace traefik
-helm install --namespace traefik traefik stable/traefik --values helm/traefik.yaml
-
-# Load Balancer. I avoid GCE's Network Load Balancer, too expensive
-kubectl apply -k https://github.com/kontena/akrobateo/deploy
-gcloud compute firewall-rules create akrobateo-fw-traefik --allow tcp:80,tcp:443 --source-ranges=0.0.0.0/0
-
-# Minio-related
-kubectl create namespace minio
-kubectl -n minio create secret generic minio --from-literal=accesskey=$MINIO_ACCESS_KEY --from-literal=secretkey=$MINIO_SECRET_KEY
-helm install --namespace minio minio stable/minio --values helm/minio.yml
-# mc config host add maelvls https://minio.k.maelvls.dev <1password> <1password> --api=s3v4 --lookup=auto
-# mc ls maelvls/
-
-# Drone-related (don't forget to setup .envrc.example)
-kubectl create namespace drone
-helm repo add drone https://charts.drone.io
-helm install --namespace drone drone drone/drone --values helm/drone.yaml --set env.DRONE_GITHUB_CLIENT_ID=$DRONE_GITHUB_CLIENT_ID --set env.DRONE_GITHUB_CLIENT_SECRET=$DRONE_GITHUB_CLIENT_SECRET --set env.DRONE_RPC_SECRET=$DRONE_RPC_SECRET
-
-# Concourse-related (https://github.com/concourse/concourse-chart)
-helm repo add concourse https://concourse-charts.storage.googleapis.com
-helm install --namespace concourse concourse concourse/concourse --values helm/concourse.yaml --set secrets.githubClientSecret=$C_GITHUB_CLIENT_SECRET
-
-# Tekton-related.
-kubectl apply -f https://storage.googleapis.com/tekton-releases/pipeline/latest/release.yaml
-kubectl apply -f https://github.com/tektoncd/dashboard/releases/download/v0.4.1/dashboard_latest_release.yaml
-kubectl apply -f k8s/tekton-dashboard-ingress.yaml
-
-# Vault-related (https://github.com/hashicorp/vault-helm)
-kubectl create namespace vault
-gcloud kms keyrings create vault-auto-seal-key-ring --location=global
-gcloud iam service-accounts create vault-kms --display-name "Vault needs access to KMS for auto-seal"
-gcloud projects add-iam-policy-binding august-period-234610 --role='roles/cloudkms.cryptoKeyEncrypterDecrypter' --member='serviceAccount:vault-kms@august-period-234610.iam.gserviceaccount.com'
-gcloud iam service-accounts keys create /dev/stdout --iam-account vault-kms@august-period-234610.iam.gserviceaccount.com | kubectl -n vault create secret generic vault-kms --from-file=credentials.json=/dev/stdin
-git clone https://github.com/hashicorp/vault-helm /tmp/vault-helm || git -C /tmp/vault-helm pull
-helm install --namespace vault vault /tmp/vault-helm --values helm/vault.yaml
-# Next steps are manual:
-kubectl -n vault port-forward vault-0 8200
-kubectl -n vault exec -it vault-0 sh
-vault operator init # Copy the 'Initial Root Token'
-vault login -method=token
-# You may run vault (CLI) like this:
-# $ kubectl -n vault exec -it vault-0 sh
-vault auth enable oidc
-vault write auth/oidc/config \
-        oidc_discovery_url="https://github.com/.well-known" \
-        oidc_client_id="$VAULT_GITHUB_CLIENT_ID" \
-        oidc_client_secret="$VAULT_GITHUB_CLIENT_SECRET" \
-        default_role="reader"
-vault write auth/oidc/role/reader \
-        bound_audiences="$VAULT_GITHUB_CLIENT_ID" \
-        allowed_redirect_uris="https://vault.k.maelvls.dev/ui/vault/auth/oidc/oidc/callback" \
-        allowed_redirect_uris="https://vault.k.maelvls.dev/oidc/callback" \
-        user_claim="sub" \
-        policies="reader"
-
-# Vault-related (incubator helm)
-# Create a service account for 'vault' storage
-gcloud iam service-accounts create vault-store --display-name "For vault storage"
-gcloud projects add-iam-policy-binding august-period-234610 --role='roles/storage.objectAdmin' --member='serviceAccount:vault-store@august-period-234610.iam.gserviceaccount.com'
-gcloud iam service-accounts keys create credentials.json --iam-account vault-store@august-period-234610.iam.gserviceaccount.com
-kubectl -n vault create secret generic vault-storage-cred-file --from-file=credentials.json=credentials.json
-
-# helm repo add incubator http://storage.googleapis.com/kubernetes-charts-incubator
-# helm --namespace vault install vault incubator/vault  --values helm/vault.yaml
-git clone https://github.com/hashicorp/vault-helm helm/vault-helm
-helm install vault ./helm/vault-helm --values helm/vault.yaml
-```
-
-Extras:
-
-```sh
-kubectl create ns kubernetes-dashboard
-git clone https://github.com/kubernetes/dashboard --depth=1 /tmp/dashboard || git -C /tmp/dashboard pull
-helm install --namespace kubernetes-dashboard kubernetes-dashboard /tmp/dashboard --values helm/kubernetes-dashboard.yaml
-
-helm install --namespace kube-system operator stable/prometheus-operator  --values helm/operator.yaml
-kubectl apply -f k8s/grafana-dashboards.yaml
-```
-
-In order to destroy:
-
-```sh
-terraform destroy
+./helm_apply
 ```
 
 ## Launch the Traefik dashboard

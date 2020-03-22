@@ -1,0 +1,61 @@
+#! /usr/bin/env bash
+
+# General prerequisites (dealt with by terraform):
+#  - the kubectl context "boring_wozniak" exists.
+
+source .envrc # if you have direnv, skip this
+kubectl config use-context boring_wozniak
+
+# Cert-manager related.
+#
+# Prerequisites (dealt with by terraform):
+#  - the namespace "cert-manager" exists
+#  - the secret cert-manager/jsonkey contains data.jsonkey which is the
+#    private key as given by 'gcloud iam service-accounts keys create'.
+#    This json key must refer to a service account that has the
+#    role 'roles/dns.admin'.
+#
+# NOTE: when trying to recreate a serviceaccount, first
+# delete the role bindings! Otherwise, the recreated serviceaccount will not
+# have the right role binding, see
+# https://twitter.com/maelvls/status/1239104479951310848.
+kubectl apply -f https://raw.githubusercontent.com/jetstack/cert-manager/master/deploy/manifests/00-crds.yaml --validate=false
+kubectl apply -f k8s/cert-manager-issuers.yaml
+helm repo add jetstack https://charts.jetstack.io
+helm upgrade --install --namespace cert-manager cert-manager jetstack/cert-manager --values helm/cert-manager.yaml
+
+# External-dns related.
+#
+# Prerequisites (dealt with by terraform):
+#  - the namespace "external-dns" exists
+#  - the secret "external-dns/jsonkey" contains data.jsonkey which is the
+#    private key as given by 'gcloud iam service-accounts keys create'.
+#    This json key must refer to a service account that has the
+#    role 'roles/dns.admin'.
+helm repo add bitnami https://charts.bitnami.com/bitnami
+helm upgrade --install --namespace external-dns external-dns bitnami/external-dns --values helm/external-dns.yaml
+
+# Traefik-related. I use traefik since its ingress support is excellent.
+kubectl create namespace traefik --dry-run -oyaml | kubectl apply -f-
+helm upgrade --install --namespace traefik traefik stable/traefik --values helm/traefik.yaml
+
+# Minio-related.
+#
+# Prerequisites (manual, don't forget to setup .envrc.example):
+#  - set MINIO_ACCESS_KEY and MINIO_SECRET_KEY with some randomly
+#    generated strings.
+kubectl create namespace minio --dry-run -oyaml | kubectl apply -f-
+kubectl -n minio create secret generic minio --from-literal=accesskey=$MINIO_ACCESS_KEY --from-literal=secretkey=$MINIO_SECRET_KEY --dry-run -oyaml | kubectl apply -f-
+helm upgrade --install --namespace minio minio stable/minio --values helm/minio.yml
+# mc config host add maelvls https://minio.k.maelvls.dev <1password> <1password> --api=s3v4 --lookup=auto
+# mc ls maelvls/
+
+# Drone-related.
+#
+# Prerequisites (manual, don't forget to setup .envrc.example):
+#  - the github app "Mael's Drone" exists and DRONE_GITHUB_CLIENT_ID
+#    and DRONE_GITHUB_CLIENT_SECRET are set.
+#  - the DRONE_RPC_SECRET is set with some randomly generated secret.
+kubectl create namespace drone
+helm repo add drone https://charts.drone.io
+helm upgrade --namespace drone drone drone/drone --values helm/drone.yaml --set env.DRONE_GITHUB_CLIENT_ID=$DRONE_GITHUB_CLIENT_ID --set env.DRONE_GITHUB_CLIENT_SECRET=$DRONE_GITHUB_CLIENT_SECRET --set env.DRONE_RPC_SECRET=$DRONE_RPC_SECRET

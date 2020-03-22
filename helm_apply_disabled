@@ -1,0 +1,63 @@
+#! /usr/bin/env bash
+
+# Concourse-related (https://github.com/concourse/concourse-chart)
+#
+# Prerequisites (manual, don't forget to setup .envrc.example):
+#  - the github app "Mael's Concourse" exists and C_GITHUB_CLIENT_ID
+#    and C_GITHUB_CLIENT_SECRET are set.
+#  - the DRONE_RPC_SECRET is set with some randomly generated secret.
+helm repo add concourse https://concourse-charts.storage.googleapis.com
+helm upgrade --install --namespace concourse concourse concourse/concourse --values helm/concourse.yaml --set secrets.githubClientId=$C_GITHUB_CLIENT_ID --set secrets.githubClientSecret=$C_GITHUB_CLIENT_SECRET
+
+# Tekton-related.
+kubectl apply -f https://storage.googleapis.com/tekton-releases/pipeline/latest/release.yaml
+kubectl apply -f https://github.com/tektoncd/dashboard/releases/download/v0.4.1/dashboard_latest_release.yaml
+kubectl apply -f k8s/tekton-dashboard-ingress.yaml
+
+# Vault-related (https://github.com/hashicorp/vault-helm)
+kubectl create namespace vault
+gcloud kms keyrings create vault-auto-seal-key-ring --location=global
+gcloud iam service-accounts create vault-kms --display-name "Vault needs access to KMS for auto-seal"
+gcloud projects add-iam-policy-binding august-period-234610 --role='roles/cloudkms.cryptoKeyEncrypterDecrypter' --member='serviceAccount:vault-kms@august-period-234610.iam.gserviceaccount.com'
+gcloud iam service-accounts keys create /dev/stdout --iam-account vault-kms@august-period-234610.iam.gserviceaccount.com | kubectl -n vault create secret generic vault-kms --from-file=credentials.json=/dev/stdin
+git clone https://github.com/hashicorp/vault-helm /tmp/vault-helm || git -C /tmp/vault-helm pull
+helm upgrade --install --namespace vault vault /tmp/vault-helm --values helm/vault.yaml
+# Next steps are manual:
+kubectl -n vault port-forward vault-0 8200
+kubectl -n vault exec -it vault-0 sh
+vault operator init # Copy the 'Initial Root Token'
+vault login -method=token
+# You may run vault (CLI) like this:
+# $ kubectl -n vault exec -it vault-0 sh
+vault auth enable oidc
+vault write auth/oidc/config \
+    oidc_discovery_url="https://github.com/.well-known" \
+    oidc_client_id="$VAULT_GITHUB_CLIENT_ID" \
+    oidc_client_secret="$VAULT_GITHUB_CLIENT_SECRET" \
+    default_role="reader"
+vault write auth/oidc/role/reader \
+    bound_audiences="$VAULT_GITHUB_CLIENT_ID" \
+    allowed_redirect_uris="https://vault.k.maelvls.dev/ui/vault/auth/oidc/oidc/callback" \
+    allowed_redirect_uris="https://vault.k.maelvls.dev/oidc/callback" \
+    user_claim="sub" \
+    policies="reader"
+
+# Vault-related (incubator helm)
+# Create a service account for 'vault' storage
+gcloud iam service-accounts create vault-store --display-name "For vault storage"
+gcloud projects add-iam-policy-binding august-period-234610 --role='roles/storage.objectAdmin' --member='serviceAccount:vault-store@august-period-234610.iam.gserviceaccount.com'
+gcloud iam service-accounts keys create credentials.json --iam-account vault-store@august-period-234610.iam.gserviceaccount.com
+kubectl -n vault create secret generic vault-storage-cred-file --from-file=credentials.json=credentials.json
+
+# helm repo add incubator http://storage.googleapis.com/kubernetes-charts-incubator
+# helm --namespace vault install vault incubator/vault  --values helm/vault.yaml
+git clone https://github.com/hashicorp/vault-helm helm/vault-helm
+helm upgrade --install vault ./helm/vault-helm --values helm/vault.yaml
+
+# Kubernetes-dashboard related.
+kubectl create ns kubernetes-dashboard
+git clone https://github.com/kubernetes/dashboard --depth=1 /tmp/dashboard || git -C /tmp/dashboard pull
+helm upgrade --install --namespace kubernetes-dashboard kubernetes-dashboard /tmp/dashboard --values helm/kubernetes-dashboard.yaml
+
+helm upgrade --install --namespace kube-system operator stable/prometheus-operator --values helm/operator.yaml
+kubectl apply -f k8s/grafana-dashboards.yaml

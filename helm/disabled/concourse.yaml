@@ -47,7 +47,6 @@ concourse:
         enabled: true
 secrets:
   create: true
-  githubClientId: 0b8bc6b96d29b4fcb685
   # github-client-secret is stored in the concourse/concourse-web secret.
   # Must pass --set secrets.githubClientSecret=$GITHUB_CLIENT_SECRET to
   # helm.
