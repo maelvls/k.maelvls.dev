@@ -23,7 +23,7 @@ terraform apply # idempotent
 ## Launch the Traefik dashboard
 
 ```sh
-$ kuberctl proxy
+$ kubectl proxy
 Starting to serve on 127.0.0.1:8001
 ```
 
