@@ -28,6 +28,19 @@ resource "google_dns_managed_zone" "maelvls" {
   }
 }
 
+# Previously I was using kube.maelvls.dev and I moved to k.maelvls.dev. To
+# ease the migration process, I add a CNAME redirection.
+resource "google_dns_record_set" "frontend" {
+  name = "kube.${google_dns_managed_zone.maelvls.dns_name}"
+  type = "CNAME"
+  ttl  = 300
+
+  managed_zone = google_dns_managed_zone.maelvls.name
+
+  rrdatas = ["k.${google_dns_managed_zone.maelvls.dns_name}"]
+}
+
+
 # Cert-manager related.
 #
 # NOTE: when trying to recreate a serviceaccount, first delete the role
