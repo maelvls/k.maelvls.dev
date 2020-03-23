@@ -27,7 +27,7 @@ $ kubectl proxy
 Starting to serve on 127.0.0.1:8001
 ```
 
-Then, open: <http://127.0.0.1:8001/api/v1/namespaces/kube-system/services/http:traefik-dashboard:80/proxy/dashboard>
+Then, open: <http://127.0.0.1:8001/api/v1/namespaces/traefik/services/http:traefik-dashboard:80/proxy>
 
 ## Launching the Kubernetes Dashboard
 
