@@ -58,4 +58,14 @@ helm upgrade --install --namespace minio minio stable/minio --values helm/minio.
 #  - the DRONE_RPC_SECRET is set with some randomly generated secret.
 kubectl create namespace drone
 helm repo add drone https://charts.drone.io
-helm upgrade --namespace drone drone drone/drone --values helm/drone.yaml --set env.DRONE_GITHUB_CLIENT_ID=$DRONE_GITHUB_CLIENT_ID --set env.DRONE_GITHUB_CLIENT_SECRET=$DRONE_GITHUB_CLIENT_SECRET --set env.DRONE_RPC_SECRET=$DRONE_RPC_SECRET
+helm upgrade --install --namespace drone drone drone/drone --values helm/drone.yaml --set env.DRONE_GITHUB_CLIENT_ID=$DRONE_GITHUB_CLIENT_ID --set env.DRONE_GITHUB_CLIENT_SECRET=$DRONE_GITHUB_CLIENT_SECRET --set env.DRONE_RPC_SECRET=$DRONE_RPC_SECRET
+
+# Concourse-related (https://github.com/concourse/concourse-chart)
+#
+# Prerequisites (manual, don't forget to setup .envrc.example):
+#  - the github app "Mael's Concourse" exists and C_GITHUB_CLIENT_ID
+#    and C_GITHUB_CLIENT_SECRET are set.
+#  - the DRONE_RPC_SECRET is set with some randomly generated secret.
+kubectl create namespace concourse
+helm repo add concourse https://concourse-charts.storage.googleapis.com
+helm upgrade --install --namespace concourse concourse concourse/concourse --values helm/concourse.yaml --set secrets.githubClientId=$C_GITHUB_CLIENT_ID --set secrets.githubClientSecret=$C_GITHUB_CLIENT_SECRET

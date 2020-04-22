@@ -1,14 +1,5 @@
 #! /usr/bin/env bash
 
-# Concourse-related (https://github.com/concourse/concourse-chart)
-#
-# Prerequisites (manual, don't forget to setup .envrc.example):
-#  - the github app "Mael's Concourse" exists and C_GITHUB_CLIENT_ID
-#    and C_GITHUB_CLIENT_SECRET are set.
-#  - the DRONE_RPC_SECRET is set with some randomly generated secret.
-helm repo add concourse https://concourse-charts.storage.googleapis.com
-helm upgrade --install --namespace concourse concourse concourse/concourse --values helm/concourse.yaml --set secrets.githubClientId=$C_GITHUB_CLIENT_ID --set secrets.githubClientSecret=$C_GITHUB_CLIENT_SECRET
-
 # Tekton-related.
 kubectl apply -f https://storage.googleapis.com/tekton-releases/pipeline/latest/release.yaml
 kubectl apply -f https://github.com/tektoncd/dashboard/releases/download/v0.4.1/dashboard_latest_release.yaml
