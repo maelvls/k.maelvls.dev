@@ -19,7 +19,7 @@ kubectl config use-context boring_wozniak
 # delete the role bindings! Otherwise, the recreated serviceaccount will not
 # have the right role binding, see
 # https://twitter.com/maelvls/status/1239104479951310848.
-kubectl apply --validate=false -f https://github.com/jetstack/cert-manager/releases/download/v0.14.2/cert-manager.yaml
+# kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v0.16.0/cert-manager.crds.yaml
 kubectl apply -f helm/cert-manager-issuers.yaml
 kubectl create namespace cert-manager --dry-run -oyaml | kubectl apply -f-
 helm repo add jetstack https://charts.jetstack.io
@@ -64,9 +64,17 @@ helm upgrade --install --namespace drone drone drone/drone --values helm/drone.y
 # Concourse-related (https://github.com/concourse/concourse-chart)
 #
 # Prerequisites (manual, don't forget to setup .envrc.example):
-#  - the github app "Mael's Concourse" exists and C_GITHUB_CLIENT_ID
-#    and C_GITHUB_CLIENT_SECRET are set.
+#  - the github app "Mael's Concourse" exists and C_GITHUB_CLIENT_ID and
+#    C_GITHUB_CLIENT_SECRET are set.
 #  - the DRONE_RPC_SECRET is set with some randomly generated secret.
+#
+# WATCH OUT, helm applies stuff to the --namespace given ("concourse"). But
+# it also creates an EMPTY namespace "concourse-main" (${RELEASE}-main)
+# which serves to the target/team "main" if you use it.
 kubectl create namespace concourse
 helm repo add concourse https://concourse-charts.storage.googleapis.com
 helm upgrade --install --namespace concourse concourse concourse/concourse --values helm/concourse.yaml --set secrets.githubClientId=$C_GITHUB_CLIENT_ID --set secrets.githubClientSecret=$C_GITHUB_CLIENT_SECRET
+
+# I moved from ExternalDNS to CoreDNS + k8s_gateway.
+# https://github.com/ori-edge/k8s_gateway
+kubectl apply -f helm/ext-coredns.yaml

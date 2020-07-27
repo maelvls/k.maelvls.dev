@@ -2,10 +2,16 @@
 
 Infra-as-code (terraform + helm 3) for creating a Kubernetes cluster with:
 
-- external DNS configured dynamically by the cluster when the LoadBalancer
-  (traefik) gets its external IP. Regarding the fqdn `*.k.maelvls.dev`: at
-  first, I was using Cloudflare and a domain at Godaddy. Now, I use a
-  Google Domain and Google Cloud DNS.
+- ExternalDNS is only used to set up `ns.k.maelvls.dev` since I delegate
+  `k.maelvls.dev` to my own name server. I used to use ExternalDNS directly
+  but it would litter the maelvls.dev zone.
+- I use a special instance of CoreDNS that runs
+  [k8s_gateway](https://github.com/ori-edge/k8s_gateway)). This instance of
+  CoreDNS does not replace the "kube-dns"-compatible CoreDNS instance that
+  run the `kubernetes` plugin.
+- The zone delegated to this instance of CoreDNS is `*.k.maelvls.dev`
+- For maelvls.dev itself, I was using Cloudflare and a domain at Godaddy.
+  Now, I use a Google Domain and Google Cloud DNS.
 - Letsencrypt certificates rotated automatically on a per-ingress basis
   using cert-manager.
 
@@ -128,4 +134,13 @@ corresponding secret:
 
 ```sh
 kubectl delete secret -n kube-system prometheus-example-tls
+```
+
+## Quick & dirty Kubernetes dashboard
+
+```sh
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/master/aio/deploy/head.yaml
+kubectl proxy
+# Paste the content of that in the dashboard:
+kubectl -n kubernetes-dashboard get secret $(kubectl -n kubernetes-dashboard get sa kubernetes-dashboard -ojsonpath='{.secrets[*].name}') -ojsonpath='{.data.token}' | base64 -d | pbcopy
 ```

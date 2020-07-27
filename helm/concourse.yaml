@@ -14,7 +14,7 @@ web:
 
 # Each worker would take 20Gi of PVC. That costs!
 persistence:
-  enabled: false
+  enaabled: false
 
 concourse:
   web:
