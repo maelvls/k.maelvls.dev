@@ -40,6 +40,20 @@ resource "google_dns_record_set" "frontend" {
   rrdatas = ["k.${google_dns_managed_zone.maelvls.dns_name}"]
 }
 
+# I use an instance of CoreDNS that I expose to the internet with a service
+# type load balancer. This service has an annotation that ExternalDNS uses
+# to set up an 'A' record named ns.k.maelvls.dev. Here, I create the NS
+# record that points to ns.k.maelvls.dev.
+resource "google_dns_record_set" "ext-coredns" {
+  name = "k.${google_dns_managed_zone.maelvls.dns_name}"
+  type = "NS"
+  ttl  = 300
+
+  managed_zone = google_dns_managed_zone.maelvls.name
+
+  rrdatas = ["ns.k.${google_dns_managed_zone.maelvls.dns_name}"]
+}
+
 
 # Cert-manager related.
 #
