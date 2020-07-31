@@ -1,0 +1,8 @@
+# https://github.com/openfaas/faas-netes/blob/master/chart/openfaas/values.yaml
+
+gatewayExternal:
+  annotations:
+    external-dns.alpha.kubernetes.io/hostname: openfaas.k.maelvls.dev
+serviceType: LoadBalancer
+basic_auth: true
+functionNamespace: openfaas-fn

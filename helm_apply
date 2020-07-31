@@ -75,6 +75,14 @@ kubectl create namespace concourse
 helm repo add concourse https://concourse-charts.storage.googleapis.com
 helm upgrade --install --namespace concourse concourse concourse/concourse --values helm/concourse.yaml --set secrets.githubClientId=$C_GITHUB_CLIENT_ID --set secrets.githubClientSecret=$C_GITHUB_CLIENT_SECRET
 
+# External CoreDNS (michael's k8s_gateway)
+#
 # I moved from ExternalDNS to CoreDNS + k8s_gateway.
 # https://github.com/ori-edge/k8s_gateway
 kubectl apply -f helm/ext-coredns.yaml
+
+# OpenFaas
+kubectl apply -f https://raw.githubusercontent.com/openfaas/faas-netes/master/namespaces.yml
+helm repo add openfaas https://openfaas.github.io/faas-netes/
+kubectl -n openfaas create secret generic basic-auth --from-literal=basic-auth-user=admin --from-literal=basic-auth-password="$OPENFAAS_PWD" --dry-run=client -oyaml | kubectl apply -f-
+helm upgrade --install --namespace openfaas openfaas openfaas/openfaas --values helm/openfaas.yaml

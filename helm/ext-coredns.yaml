@@ -73,7 +73,7 @@ metadata:
   name: ext-coredns
   namespace: ext-coredns
   annotations:
-    external-dns.alpha.kubernetes.io/hostname: ns.k.maelvls.dev
+    external-dns.alpha.kubernetes.io/hostname: ns-k.maelvls.dev
 spec:
   type: LoadBalancer
   selector:
