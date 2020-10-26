@@ -20,7 +20,7 @@ Then:
 ```sh
 # Prerequisite:
 #  - have a Kubernetes cluster with the context "boring_wozniak".
-#  - have the Google Cloud project "august-period-234610" on us-east1.
+#  - have the Google Cloud project "august-period-234610" on us-east1 (use the legacy way `gcloud auth application-default login`, not the new `gcloud auth login` since the gcloud terraform module uses the application-default method)
 #  - have .envrc set with the env variables (see .envrc.example).
 terraform apply # idempotent
 ./helm_apply    # idempotent
