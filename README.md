@@ -14,6 +14,14 @@ Infra-as-code (terraform + helm 3) for creating a Kubernetes cluster with:
   Now, I use a Google Domain and Google Cloud DNS.
 - Letsencrypt certificates rotated automatically on a per-ingress basis
   using cert-manager.
+  > ⚠️ Since the DNS zone that cert-manager wants to update in order to pass
+  > the DNS-01 challenges is now handled by CoreDNS and that CoreDNS isn't
+  > supported yet (and doesn't support [rfc2136](https://tools.ietf.org/html/rfc2136)),
+  > I can't issue wildcard domains anymore and my `*.minio.k.maelvls.dev`
+  > per-bucket domains is now broken. One idea could be to use Ricardo Katz'
+  > [rikatz/acme-solver](https://github.com/rikatz/acme-solver) which fakes
+  > cert-manager's DNS provider and instead uses the Order and Challenge
+  > objects to set CoreDNS records using its proxying-through-grpc mechanism.
 
 Then:
 
