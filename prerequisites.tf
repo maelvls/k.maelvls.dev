@@ -40,6 +40,25 @@ resource "google_dns_record_set" "frontend" {
   rrdatas = ["k.${google_dns_managed_zone.maelvls.dns_name}"]
 }
 
+# Due to the fact that I delegate the k.maelvls.dev zone to ext-coredns,
+# cert-manager will find out that k.maelvls.dev returns an SOA record, but
+# it will also see that k.maelvls.dev isn't a zone in my Cloud DNS account
+# (maelvls.dev is the actual zone).
+#
+# The solution is to use a CNAME record so that the
+# _acme-challenge.k.maelvls.dev gets aliased to something in the Cloud DNS
+# zone (as opposed to something in the k.maelvls.dev zone). See:
+# https://cert-manager.io/docs/configuration/acme/dns01/#delegated-domains-for-dns01
+resource "google_dns_record_set" "trick-for-cert-manager" {
+  name = "_acme-challenge.k.${google_dns_managed_zone.maelvls.dns_name}"
+  type = "CNAME"
+  ttl  = 300
+
+  managed_zone = google_dns_managed_zone.maelvls.name
+
+  rrdatas = ["_acme-challenge.${google_dns_managed_zone.maelvls.dns_name}"]
+}
+
 # I use an instance of CoreDNS that I expose to the internet with a service
 # type load balancer. This service has an annotation that ExternalDNS uses
 # to set up an 'A' record named ns-k.maelvls.dev. Here, I create the NS

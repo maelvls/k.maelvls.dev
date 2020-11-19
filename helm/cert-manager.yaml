@@ -1,2 +1,7 @@
-rbac: { create: true }
-serviceAccount: { create: true }
+global:
+  rbac:
+    create: true
+  logLevel: 4
+
+serviceAccount:
+  create: true

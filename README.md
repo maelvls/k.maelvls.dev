@@ -29,6 +29,7 @@ Then:
 # Prerequisite:
 #  - have a Kubernetes cluster with the context "boring_wozniak".
 #  - have the Google Cloud project "august-period-234610" on us-east1 (use the legacy way `gcloud auth application-default login`, not the new `gcloud auth login` since the gcloud terraform module uses the application-default method)
+#  - have Terraform initialized (`terraform init`)
 #  - have .envrc set with the env variables (see .envrc.example).
 terraform apply # idempotent
 ./helm_apply    # idempotent
@@ -42,6 +43,13 @@ Starting to serve on 127.0.0.1:8001
 ```
 
 Then, open: <http://127.0.0.1:8001/api/v1/namespaces/traefik/services/http:traefik-dashboard:80/proxy>
+
+Or using port-forwaring:
+
+```sh
+kubectl -n traefik port-forward $(kubectl get pod -l app.kubernetes.io/name=traefik -oname -n traefik) 9000:9000 &
+open http://127.0.0.1:9000/dashboard/
+```
 
 ## Launching the Kubernetes Dashboard
 

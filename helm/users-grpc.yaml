@@ -1,0 +1,18 @@
+image:
+  tag: "1.2.0-rc1"
+
+ingress:
+  enabled: true
+  annotations:
+    kubernetes.io/ingress.class: traefik
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    # traefik.ingress.kubernetes.io/router.tls.passthrough: "true"
+  hosts: [users-server.k.maelvls.dev]
+  tls:
+    - hosts: [users-server.k.maelvls.dev]
+      secretName: tls
+
+tls:
+  enabled: true
+  # The secret must contain the fields 'tls.key' and 'tls.crt'.
+  secretName: tls

@@ -15,11 +15,11 @@ kubectl config use-context boring_wozniak
 #    This json key must refer to a service account that has the
 #    role 'roles/dns.admin'.
 #
-# NOTE: when trying to recreate a serviceaccount, first
+# NOTE: when trying to recreate a GCP serviceaccount, first
 # delete the role bindings! Otherwise, the recreated serviceaccount will not
 # have the right role binding, see
 # https://twitter.com/maelvls/status/1239104479951310848.
-# kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v0.16.0/cert-manager.crds.yaml
+kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.0.4/cert-manager.crds.yaml
 kubectl apply -f helm/cert-manager-issuers.yaml
 kubectl create namespace cert-manager --dry-run -oyaml | kubectl apply -f-
 helm repo add jetstack https://charts.jetstack.io
@@ -37,8 +37,9 @@ helm repo add bitnami https://charts.bitnami.com/bitnami
 helm upgrade --install --namespace external-dns external-dns bitnami/external-dns --values helm/external-dns.yaml
 
 # Traefik-related. I use traefik since its ingress support is excellent.
+helm repo add traefik https://containous.github.io/traefik-helm-chart
 kubectl create namespace traefik --dry-run -oyaml | kubectl apply -f-
-helm upgrade --install --namespace traefik traefik stable/traefik --values helm/traefik.yaml
+helm upgrade --install --namespace traefik traefik traefik/traefik --values helm/traefik.yaml
 
 # Minio-related.
 #
@@ -86,3 +87,9 @@ kubectl apply -f https://raw.githubusercontent.com/openfaas/faas-netes/master/na
 helm repo add openfaas https://openfaas.github.io/faas-netes/
 kubectl -n openfaas create secret generic basic-auth --from-literal=basic-auth-user=admin --from-literal=basic-auth-password="$OPENFAAS_PWD" --dry-run=client -oyaml | kubectl apply -f-
 helm upgrade --install --namespace openfaas openfaas openfaas/openfaas --values helm/openfaas.yaml
+
+# users-grpc
+
+helm repo add maelvls https://maelvls.dev/helm-charts
+helm upgrade --install users-grpc maelvls/users-grpc --create-namespace --namespace users-grpc --values helm/users-grpc.yaml
+kubectl apply -f helm/users-grpc-ingressroute.yaml

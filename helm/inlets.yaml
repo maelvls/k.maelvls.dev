@@ -1,0 +1,150 @@
+kind: Namespace
+apiVersion: v1
+metadata:
+  name: inlets
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: inlets
+  namespace: inlets
+  labels:
+    app: inlets
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8000
+      protocol: TCP
+      targetPort: 8000
+  selector:
+    app: inlets
+---
+kind: Ingress
+apiVersion: networking.k8s.io/v1beta1
+metadata:
+  name: inlets
+  namespace: inlets
+  labels:
+    app: inlets
+  annotations:
+    kubernetes.io/ingress.class: traefik
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+spec:
+  rules:
+    - host: inlets.k.maelvls.dev
+      http:
+        paths:
+          - path: /
+            backend:
+              serviceName: inlets
+              servicePort: 8000
+  tls:
+    - hosts: [inlets.k.maelvls.dev]
+      secretName: inlets-tls
+---
+kind: Ingress
+apiVersion: networking.k8s.io/v1beta1
+metadata:
+  name: inlets-tunnel
+  namespace: inlets
+  labels:
+    app: inlets
+  annotations:
+    kubernetes.io/ingress.class: traefik
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    traefik.ingress.kubernetes.io/router.middlewares: inlets-websocket-trick@kubernetescrd
+spec:
+  rules:
+    - host: inlets.k.maelvls.dev
+      http:
+        paths:
+          - path: /tunnel
+            backend:
+              serviceName: inlets
+              servicePort: 8000
+  tls:
+    - hosts: [inlets.k.maelvls.dev]
+      secretName: inlets-tls
+---
+# https://community.traefik.io/t/how-to-make-websockets-work-with-traefik-2-0-setting-up-rancher/1732
+apiVersion: traefik.containo.us/v1alpha1
+kind: Middleware
+metadata:
+  name: websocket-trick
+  namespace: inlets
+  labels:
+    app: inlets
+spec:
+  headers:
+    customRequestHeaders:
+      X-Forwarded-Proto: https
+---
+# apiVersion: traefik.containo.us/v1alpha1
+# kind: IngressRouteTCP
+# metadata:
+#   name: inlets
+#   labels:
+#     app: inlets
+# spec:
+#   entryPoints:
+#     - footc
+#   routes:
+#     - match: HostSNI(`inlets.k.maelvls.dev`)
+#       services:
+#         - name: inlets
+#           port: 8000
+#   tls:
+#     passthrough: true
+# ---
+# I can't use the annotation that gets picked up by cert-manager to create
+# a certificate, since this annotation should be set on an Ingress... But
+# I'm using an IngressRoute! See:
+# https://community.traefik.io/t/traefik-v2-cert-manager/2566/7
+# ---
+# apiVersion: cert-manager.io/v1alpha2
+# kind: Certificate
+# metadata:
+#   name: inlets
+#   labels:
+#     app: inlets
+# spec:
+#   commonName: inlets.k.maelvls.dev
+#   secretName: inlets-cert
+#   dnsNames:
+#     - inlets.k.maelvls.dev
+#   issuerRef:
+#     name: letsencrypt-prod
+#     kind: ClusterIssuer
+# ---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: inlets
+  namespace: inlets
+  labels:
+    app: inlets
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: inlets
+  template:
+    metadata:
+      labels:
+        app: inlets
+    spec:
+      containers:
+        - name: inlets
+          image: inlets/inlets:2.7.4
+          imagePullPolicy: Always
+          command: ["inlets"]
+          args:
+            - "server"
+            - "--token-from=/var/inlets/token"
+          volumeMounts:
+            - name: inlets-token-volume
+              mountPath: /var/inlets/
+      volumes:
+        - name: inlets-token-volume
+          secret:
+            secretName: inlets-token

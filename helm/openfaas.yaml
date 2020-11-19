@@ -3,6 +3,29 @@
 gatewayExternal:
   annotations:
     external-dns.alpha.kubernetes.io/hostname: openfaas.k.maelvls.dev
-serviceType: LoadBalancer
+
+
+# exposeServices and ingress are mutex
+exposeServices: true
+serviceType: ClusterIP
+ingress:
+  enabled: true
+  hosts:
+  - host: k.maelvls.dev
+    serviceName: gateway
+    servicePort: 8080
+    path: /
+  annotations:
+    kubernetes.io/ingress.class: traefik
 basic_auth: true
 functionNamespace: openfaas-fn
+
+# ingressOperator: specific FQDN and TLS for Functions.
+# https://github.com/openfaas-incubator/ingress-operator
+ingressOperator:
+  create: true
+  image: openfaas/ingress-operator:0.6.2
+  replicas: 1
+  resources:
+    requests:
+      memory: "25Mi"

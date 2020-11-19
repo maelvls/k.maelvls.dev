@@ -6,29 +6,25 @@ ssl:
   enabled: true
   enforced: true
 
-# https://docs.cert-manager.io/en/latest/tasks/issuing-certificates/ingress-shim.html#
-dashboard:
-  enabled: true
-  # domain: traefik.k.maelvls.dev
-  ingress:
-    enabled: false
-  #   annotations:
-  #     kubernetes.io/ingress.class: traefik
-  #     cert-manager.io/cluster-issuer: letsencrypt-prod
-  #   tls:
-  #     - hosts: [traefik.k.maelvls.dev]
-  #       secretName: traefik-example-tls
+# Create an IngressRoute for the dashboard
+ingressRoute:
+  dashboard:
+    enabled: true
+    # Additional ingressRoute annotations (e.g. for kubernetes.io/ingress.class)
+    annotations: {}
 
-kubernetes:
-  # If kubernetes.namespaces isn't set, all namespaces are watched.
-  namespaces: []
-  ingressEndpoint:
-    # Updates each Ingress Status.LoadBalancer.Ingress so that external-dns may
-    # be able to add records based on the Ingress.Spec.Tls or Spec.Rules.Host or
-    # the annotation external-dns.alpha.kubernetes.io/hostname.
-    #
-    # https://github.com/containous/traefik/issues/2173#issuecomment-434271161
-    publishedService: "traefik/traefik"
+providers:
+  kubernetesIngress:
+    enabled: true
+    publishedService:
+      # Updates each Ingress Status.LoadBalancer.Ingress using the value
+      # set in traefik/traefik's Service.Status.LoadBalancer. That's
+      # because we need external-dns to be able to add records based on the
+      # Ingress.Spec.Tls or Spec.Rules.Host or the annotation
+      # external-dns.alpha.kubernetes.io/hostname.
+      #
+      # https://github.com/containous/traefik/issues/2173#issuecomment-434271161
+      enabled: true
 # I use Google's Cloud DNS. As soon as the LoadBalancer has an external IP, I
 # want to add a 'A' record to Cloud DNS.
 # https://github.com/kubernetes-sigs/external-dns/blob/master/docs/tutorials/gke.md
@@ -52,3 +48,7 @@ kubernetes:
 # See
 # https://github.com/kontena/akrobateo
 # https://serverfault.com/questions/801189/expose-port-80-and-443-on-google-container-engine-without-load-balancer
+
+service:
+  enabled: true
+  type: LoadBalancer

@@ -1,0 +1,17 @@
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRouteTCP
+metadata:
+  name: users-grpc
+  namespace: users-grpc
+  annotations:
+    fake-ingress: "true"
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: HostSNI(`users-server.k.maelvls.dev`)
+      services:
+        - name: users-grpc
+          port: 8000
+  tls:
+    passthrough: true

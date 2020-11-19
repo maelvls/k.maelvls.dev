@@ -17,8 +17,17 @@ metadata:
   name: ext-coredns
   namespace: ext-coredns
 data:
+  # A test I had conducted when I wanted to fix cert-manager which was
+  # finding the SOA of my delegated DNS (k.maelvls.dev) instead of my Cloud
+  # DNS.
+  #   template IN CNAME k.maelvls.dev {
+  #     match "^k.maelvls\.dev$"
+  #     answer ". 60 IN CNAME _acme-challenge.maelvls.dev."
+  #     fallthrough
+  #   }
   Corefile: |-
     .:53 {
+        debug
         errors
         log
         ready
