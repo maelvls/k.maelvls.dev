@@ -20,10 +20,9 @@ kubectl config use-context boring_wozniak
 # have the right role binding, see
 # https://twitter.com/maelvls/status/1239104479951310848.
 kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.0.4/cert-manager.crds.yaml
-kubectl apply -f helm/cert-manager-issuers.yaml
-kubectl create namespace cert-manager --dry-run -oyaml | kubectl apply -f-
 helm repo add jetstack https://charts.jetstack.io
-helm upgrade --install --namespace cert-manager cert-manager jetstack/cert-manager --values helm/cert-manager.yaml
+helm upgrade --install cert-manager jetstack/cert-manager --create-namespace --namespace cert-manager --values helm/cert-manager.yaml
+kubectl apply -f helm/cert-manager-issuers.yaml
 
 # External-dns related.
 #
@@ -34,21 +33,21 @@ helm upgrade --install --namespace cert-manager cert-manager jetstack/cert-manag
 #    This json key must refer to a service account that has the
 #    role 'roles/dns.admin'.
 helm repo add bitnami https://charts.bitnami.com/bitnami
-helm upgrade --install --namespace external-dns external-dns bitnami/external-dns --values helm/external-dns.yaml
+helm upgrade --install external-dns bitnami/external-dns --create-namespace --namespace external-dns --values helm/external-dns.yaml
 
 # Traefik-related. I use traefik since its ingress support is excellent.
 helm repo add traefik https://containous.github.io/traefik-helm-chart
 kubectl create namespace traefik --dry-run -oyaml | kubectl apply -f-
-helm upgrade --install --namespace traefik traefik traefik/traefik --values helm/traefik.yaml
+helm upgrade --install traefik traefik/traefik --create-namespace --namespace traefik --values helm/traefik.yaml
 
 # Minio-related.
 #
 # Prerequisites (manual, don't forget to setup .envrc.example):
 #  - set MINIO_ACCESS_KEY and MINIO_SECRET_KEY with some randomly
 #    generated strings.
-kubectl create namespace minio --dry-run -oyaml | kubectl apply -f-
+helm repo add minio https://helm.min.io/
+helm upgrade --install minio minio/minio --create-namespace --namespace minio --values helm/minio.yml
 kubectl -n minio create secret generic minio --from-literal=accesskey=$MINIO_ACCESS_KEY --from-literal=secretkey=$MINIO_SECRET_KEY --dry-run -oyaml | kubectl apply -f-
-helm upgrade --install --namespace minio minio stable/minio --values helm/minio.yml
 # mc config host add maelvls https://minio.k.maelvls.dev <1password> <1password> --api=s3v4 --lookup=auto
 # mc ls maelvls/
 
@@ -60,7 +59,7 @@ helm upgrade --install --namespace minio minio stable/minio --values helm/minio.
 #  - the DRONE_RPC_SECRET is set with some randomly generated secret.
 kubectl create namespace drone
 helm repo add drone https://charts.drone.io
-helm upgrade --install --namespace drone drone drone/drone --values helm/drone.yaml --set env.DRONE_GITHUB_CLIENT_ID=$DRONE_GITHUB_CLIENT_ID --set env.DRONE_GITHUB_CLIENT_SECRET=$DRONE_GITHUB_CLIENT_SECRET --set env.DRONE_RPC_SECRET=$DRONE_RPC_SECRET
+helm upgrade --install --create-namespace --namespace drone drone drone/drone --values helm/drone.yaml --set env.DRONE_GITHUB_CLIENT_ID=$DRONE_GITHUB_CLIENT_ID --set env.DRONE_GITHUB_CLIENT_SECRET=$DRONE_GITHUB_CLIENT_SECRET --set env.DRONE_RPC_SECRET=$DRONE_RPC_SECRET
 
 # Concourse-related (https://github.com/concourse/concourse-chart)
 #
@@ -74,7 +73,7 @@ helm upgrade --install --namespace drone drone drone/drone --values helm/drone.y
 # which serves to the target/team "main" if you use it.
 kubectl create namespace concourse
 helm repo add concourse https://concourse-charts.storage.googleapis.com
-helm upgrade --install --namespace concourse concourse concourse/concourse --values helm/concourse.yaml --set secrets.githubClientId=$C_GITHUB_CLIENT_ID --set secrets.githubClientSecret=$C_GITHUB_CLIENT_SECRET
+helm upgrade --install concourse concourse/concourse --create-namespace --namespace concourse --values helm/concourse.yaml --set secrets.githubClientId=$C_GITHUB_CLIENT_ID --set secrets.githubClientSecret=$C_GITHUB_CLIENT_SECRET
 
 # External CoreDNS (michael's k8s_gateway)
 #
@@ -86,7 +85,7 @@ kubectl apply -f helm/ext-coredns.yaml
 kubectl apply -f https://raw.githubusercontent.com/openfaas/faas-netes/master/namespaces.yml
 helm repo add openfaas https://openfaas.github.io/faas-netes/
 kubectl -n openfaas create secret generic basic-auth --from-literal=basic-auth-user=admin --from-literal=basic-auth-password="$OPENFAAS_PWD" --dry-run=client -oyaml | kubectl apply -f-
-helm upgrade --install --namespace openfaas openfaas openfaas/openfaas --values helm/openfaas.yaml
+helm upgrade --install openfaas openfaas/openfaas --create-namespace --namespace openfaas --values helm/openfaas.yaml
 
 # users-grpc
 
