@@ -1,5 +1,5 @@
 image:
-  tag: "1.2.0-rc1"
+  tag: "1.2.1"
 
 ingress:
   enabled: true
