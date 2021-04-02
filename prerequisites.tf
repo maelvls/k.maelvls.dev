@@ -11,8 +11,8 @@ provider "google" {
 }
 
 provider "kubernetes" {
-  load_config_file = "true" # use local kube config
-  config_context   = "boring_wozniak"
+  config_path    = "~/.kube/config"
+  config_context = "boring_wozniak"
 }
 
 
